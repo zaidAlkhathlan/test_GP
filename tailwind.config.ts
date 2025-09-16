@@ -23,6 +23,14 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        tawreed: {
+          green: "#32A44F",
+          "green-light": "#44C564",
+          "bg-gray": "#EBEBEB",
+          "text-dark": "#22262A",
+          "text-gray": "#64748B",
+          "border-gray": "#E2E8F0",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
