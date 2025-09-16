@@ -40,12 +40,14 @@ export default function Register() {
                 >
                   {step}
                 </div>
-                
+
                 {/* Connector Line */}
                 {index < steps.length - 1 && (
                   <div
                     className={`w-12 h-1 ${
                       step < currentStep
+                        ? "bg-tawreed-green"
+                        : step === currentStep
                         ? "bg-tawreed-green"
                         : "bg-gray-100"
                     }`}
@@ -180,7 +182,7 @@ export default function Register() {
                     type="tel"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
-                    placeholder="ادخل رقم جوال الموسسة التجارية"
+                    placeholder="ادخل رقم جوال الموسسة التجاري��"
                     className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                     dir="rtl"
                   />
