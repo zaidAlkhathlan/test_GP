@@ -2,13 +2,16 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Register() {
-  const [currentStep, setCurrentStep] = useState(2); // Set to step 2 to show the new form
+  const [currentStep, setCurrentStep] = useState(3); // Set to step 3 to show the new form
   const [commercialRegNumber, setCommercialRegNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [institutionName, setInstitutionName] = useState("");
   const [institutionType, setInstitutionType] = useState("");
   const [location, setLocation] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [activityDescription, setActivityDescription] = useState("");
+  const [certificates, setCertificates] = useState("");
+  const [licenses, setLicenses] = useState("");
 
   const steps = [1, 2, 3, 4, 5];
 
@@ -102,7 +105,7 @@ export default function Register() {
                   />
                 </div>
               </>
-            ) : (
+            ) : currentStep === 2 ? (
               <>
                 {/* Step 2: Basic Information */}
                 <h2 className="text-xl font-bold text-tawreed-text-dark mb-6 text-right font-arabic">
@@ -118,7 +121,7 @@ export default function Register() {
                     type="text"
                     value={institutionName}
                     onChange={(e) => setInstitutionName(e.target.value)}
-                    placeholder="أدخل عنوان الموسسة التجارية المسجلة في وزارة التجارة"
+                    placeholder="أدخل عنوان الموسسة التجارية المسجلة في وزارة التج��رة"
                     className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                     dir="rtl"
                   />
@@ -182,10 +185,84 @@ export default function Register() {
                     type="tel"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
-                    placeholder="ادخل رقم جوال الموسسة التجاري��"
+                    placeholder="ادخل رقم جوال الموسسة التجارية"
                     className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                     dir="rtl"
                   />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Step 3: Description and Requirements */}
+                <h2 className="text-xl font-bold text-tawreed-text-dark mb-6 text-right font-arabic">
+                  الوصف والمتطلبات
+                </h2>
+
+                {/* Institution Activity Description */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
+                    وصف نشاط المؤسسة
+                  </label>
+                  <textarea
+                    value={activityDescription}
+                    onChange={(e) => setActivityDescription(e.target.value)}
+                    placeholder="اكتب وصفاً مفصلاً للموسسة ونشاطها..."
+                    rows={6}
+                    className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm resize-none"
+                    dir="rtl"
+                  />
+                </div>
+
+                {/* Institution Certificates */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
+                    شهادات الموسسة (شهادة الزكاة، شهادة السعودة...)
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={certificates}
+                      onChange={(e) => setCertificates(e.target.value)}
+                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
+                      dir="rtl"
+                    >
+                      <option value="">اختر الشهادات</option>
+                      <option value="zakat">شهادة الزكاة</option>
+                      <option value="saudization">شهادة السعودة</option>
+                      <option value="gosi">شهادة التأمينات الاجتماعية</option>
+                      <option value="chamber">شهادة الغرفة التجارية</option>
+                    </select>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
+                        <path d="M4 6L8 10L12 6" stroke="#22262A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Related Licenses */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
+                    التراخيص المربوطة بنشاط المؤسسة
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={licenses}
+                      onChange={(e) => setLicenses(e.target.value)}
+                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
+                      dir="rtl"
+                    >
+                      <option value="">اختر التراخيص</option>
+                      <option value="commercial">الرخصة التجارية</option>
+                      <option value="industrial">الرخصة الصناعية</option>
+                      <option value="construction">رخصة المقاولات</option>
+                      <option value="professional">الرخصة المهنية</option>
+                    </select>
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
+                        <path d="M4 6L8 10L12 6" stroke="#22262A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </>
             )}
