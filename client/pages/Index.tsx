@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function Index() {
   return (
     <div className="min-h-screen bg-tawreed-bg-gray flex items-center justify-center p-4" dir="rtl">
@@ -12,7 +14,7 @@ export default function Index() {
           </h2>
           <p className="text-sm text-tawreed-text-gray leading-relaxed font-arabic px-4">
             منصة اعتماد المدعومة بالذكاء الاصطناعي للمشتريات بين<br />
-            الشركات
+            ال��ركات
           </p>
         </div>
 
@@ -143,12 +145,12 @@ export default function Index() {
         <div className="text-center">
           <p className="text-xs text-tawreed-text-gray font-arabic">
             ليس لديك حساب؟{" "}
-            <a
-              href="#"
+            <Link
+              to="/register"
               className="text-tawreed-green hover:underline font-arabic"
             >
               سجل الآن
-            </a>
+            </Link>
           </p>
         </div>
       </div>
