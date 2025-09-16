@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function Register() {
-  const [currentStep, setCurrentStep] = useState(3); // Set to step 3 to show the new form
+  const [currentStep, setCurrentStep] = useState(1); // Start from step 1
   const [commercialRegNumber, setCommercialRegNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [institutionName, setInstitutionName] = useState("");
@@ -13,7 +13,7 @@ export default function Register() {
   const [certificates, setCertificates] = useState("");
   const [licenses, setLicenses] = useState("");
 
-  const steps = [1, 2, 3, 4, 5];
+  const steps = [1, 2, 3, 4]; // Remove step 5
 
   return (
     <div className="min-h-screen bg-white px-14 py-16" dir="rtl">
@@ -121,7 +121,7 @@ export default function Register() {
                     type="text"
                     value={institutionName}
                     onChange={(e) => setInstitutionName(e.target.value)}
-                    placeholder="أدخل عنوان الموسسة التجارية المسجلة في وزارة التج��رة"
+                    placeholder="أدخل عنوان الموسسة التجارية المسجلة في وزارة التجارة"
                     className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                     dir="rtl"
                   />
@@ -229,7 +229,7 @@ export default function Register() {
                       <option value="zakat">شهادة الزكاة</option>
                       <option value="saudization">شهادة السعودة</option>
                       <option value="gosi">شهادة التأمينات الاجتماعية</option>
-                      <option value="chamber">شهادة الغرفة التجارية</option>
+                      <option value="chamber">شهادة الغ��فة التجارية</option>
                     </select>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
@@ -272,7 +272,7 @@ export default function Register() {
           <div className="flex justify-between items-center">
             {/* Next Button */}
             <button
-              onClick={() => setCurrentStep(Math.min(currentStep + 1, 5))}
+              onClick={() => setCurrentStep(Math.min(currentStep + 1, 4))}
               className="px-4 py-2.5 bg-gradient-to-r from-tawreed-green to-tawreed-green-light text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all"
             >
               التالي
