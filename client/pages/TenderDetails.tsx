@@ -14,41 +14,88 @@ export default function TenderDetails() {
               <p className="text-sm text-gray-500">تتبع حالة المناقصة ومتابعة التحديثات</p>
             </div>
             <div>
-              <button className="bg-tawreed-green text-white px-3 py-1 rounded">العروض المقدمة</button>
+              <Link to={id ? `/tender/${id}/offers` : '#'} className="inline-flex items-center gap-2 px-3 py-1 bg-tawreed-green text-white rounded">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M3 7h18M7 11h10M9 15h6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                العروض المقدمة
+              </Link>
             </div>
           </div>
 
-          {/* Tender summary box */}
-          <div className="bg-white border rounded p-4 mb-6">
-            <div className="flex justify-between items-start gap-4">
+          {/* Tender summary box with badges and fields */}
+          <div className="bg-white border rounded p-4 mb-6" dir="rtl">
+            <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
               <div className="text-right flex-1">
                 <h3 className="font-semibold text-lg">بناء ورشة سيارات</h3>
                 <p className="text-sm text-gray-500">مؤسسة بناء المنشآت</p>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <p className="text-xs text-gray-500">رقم المرجع</p>
+                    <p className="text-sm font-medium">#25073901054</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <p className="text-xs text-gray-500">تاريخ النشر</p>
+                    <p className="text-sm font-medium">2025-08-01</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <p className="text-xs text-gray-500">تاريخ الانتهاء</p>
+                    <p className="text-sm font-medium">2025-08-04</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <p className="text-xs text-gray-500">ميزانية المناقصة</p>
+                    <p className="text-sm font-medium">1000 ريال</p>
+                  </div>
+                </div>
               </div>
-              <div className="w-40 text-left">
-                <div className="bg-green-50 p-3 rounded text-center">15</div>
-                <p className="text-xs text-gray-500 mt-2">موعد انتهاء التقديم</p>
+
+              <div className="w-full lg:w-64 text-right">
+                <div className="flex items-center gap-3 mb-3 justify-end">
+                  <div className="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center border">15</div>
+                  <div className="text-sm text-gray-600">موعد انتهاء التقديم</div>
+                </div>
+
+                <div className="flex items-center gap-2 mb-3 justify-end">
+                  <Link to={id ? `/tender/${id}/offers` : '#'} className="inline-flex items-center gap-2 px-3 py-1 bg-tawreed-green text-white rounded">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <path d="M3 7h18M7 11h10M9 15h6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    العروض المقدمة
+                  </Link>
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">8</span>
+                </div>
+
+                <div className="flex gap-2 flex-wrap justify-end">
+                  <span className="px-3 py-1 bg-green-100 text-sm text-green-800 rounded-full">مقاولات</span>
+                  <span className="px-3 py-1 bg-green-100 text-sm text-green-800 rounded-full">ترميم</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Stat cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded p-4 text-right shadow">
-              <p className="text-xs text-gray-500">الأيام المتبقية</p>
-              <p className="text-xl font-bold text-tawreed-green">15</p>
+          {/* Stat cards - 3 cards like BuyerHome */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded p-4 text-right shadow flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-2xl">📅</div>
+              <div>
+                <p className="text-xs text-gray-500">الأيام المتبقية</p>
+                <p className="text-xl font-bold text-tawreed-green">15</p>
+              </div>
             </div>
-            <div className="bg-white rounded p-4 text-right shadow">
-              <p className="text-xs text-gray-500">العروض المقدمة</p>
-              <p className="text-xl font-bold">8</p>
+            <div className="bg-white rounded p-4 text-right shadow flex items-center gap-3">
+              <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center text-2xl">📄</div>
+              <div>
+                <p className="text-xs text-gray-500">العروض المقدمة</p>
+                <p className="text-xl font-bold">8</p>
+              </div>
             </div>
-            <div className="bg-white rounded p-4 text-right shadow">
-              <p className="text-xs text-gray-500">عدد الزيارات</p>
-              <p className="text-xl font-bold">12</p>
-            </div>
-            <div className="bg-white rounded p-4 text-right shadow">
-              <p className="text-xs text-gray-500">حالة المناقصة</p>
-              <p className="text-xl font-bold text-green-600">مفتوحة</p>
+            <div className="bg-white rounded p-4 text-right shadow flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">👥</div>
+              <div>
+                <p className="text-xs text-gray-500">عدد الزيارات</p>
+                <p className="text-xl font-bold">12</p>
+              </div>
             </div>
           </div>
 

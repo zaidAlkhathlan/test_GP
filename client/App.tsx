@@ -11,6 +11,8 @@ import Register from "./pages/Register";
 import BuyerHome from "./pages/BuyerHome";
 import NotFound from "./pages/NotFound";
 import TenderDetails from "./pages/TenderDetails";
+import TenderOffers from "./pages/TenderOffers";
+import ActiveTenders from "./pages/ActiveTenders";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +26,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/register" element={<Register />} />
           <Route path="/buyer" element={<BuyerHome />} />
+          <Route path="/tenders/active" element={<ActiveTenders />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
+          <Route path="/tender/:id/offers" element={<TenderOffers />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

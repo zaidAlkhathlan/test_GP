@@ -13,8 +13,8 @@ export default function Index() {
             منصة المشتريات الذكية
           </h2>
           <p className="text-sm text-tawreed-text-gray leading-relaxed font-arabic px-4">
-            منصة اعتماد المدعومة بالذكاء الاصطناعي للمشتريات بين<br />
-            ال��ركات
+            منصة المشتريات المدعومة بالذكاء الاصطناعي للمشتريات بين<br />
+            الشركات
           </p>
         </div>
 

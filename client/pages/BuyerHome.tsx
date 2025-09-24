@@ -11,7 +11,7 @@ export default function BuyerHome() {
             <div className="flex items-center gap-4">
               <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">مؤسسة: اسم المنشأة</button>
               <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
-                <a className="hover:underline">المناقصات النشطة</a>
+                <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
                 <a className="hover:underline">المناقصات المنتهية</a>
                 <a className="hover:underline">من نحن</a>
                 <a className="hover:underline">اتصل بنا</a>
@@ -46,29 +46,69 @@ export default function BuyerHome() {
         <div className="flex justify-center mb-8">
           <button className="bg-tawreed-green text-white px-6 py-2 rounded-full shadow">استكشف المناقصات الذكية</button>
         </div>
+        {/* Stats row with four small white cards (icon + large green number + small percent) */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">نشر مناقصة جديدة</button>
+            </div>
+            <div className="text-right">
+              <h3 className="text-base font-semibold">الإحصائيات الحية</h3>
+            </div>
+          </div>
 
-        {/* Stats row centered */}
-        <div className="flex justify-center mb-8">
-          <div className="flex gap-6">
-            <div className="bg-white p-4 rounded-lg shadow-sm w-52 text-right">
-              <p className="text-xs text-gray-500">موردين نشطين</p>
-              <p className="text-2xl font-bold text-tawreed-green">892</p>
-              <p className="text-xs text-green-500">5.7%</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow-sm text-right flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-50 rounded-lg flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="#16a34a" strokeWidth="1.2" fill="none"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">عروض مقدمة</div>
+                <div className="text-2xl font-bold text-tawreed-green">1,719,931</div>
+                <div className="text-xs text-green-500">12.5% ↑</div>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm w-52 text-right">
-              <p className="text-xs text-gray-500">مشتريات منجزة</p>
-              <p className="text-2xl font-bold">4,020</p>
-              <p className="text-xs text-green-500">12.3%</p>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm text-right flex items-center gap-4">
+              <div className="w-14 h-14 bg-yellow-50 rounded-lg flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M3 17l3-3 4 4 8-8 3 3" stroke="#c59f10" strokeWidth="1.2" fill="none"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">مناقصات تم ترسيطها</div>
+                <div className="text-2xl font-bold text-tawreed-green">405,926</div>
+                <div className="text-xs text-green-500">8.3% ↑</div>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm w-52 text-right">
-              <p className="text-xs text-gray-500">مناقصات تم ترسيبها</p>
-              <p className="text-2xl font-bold">405,926</p>
-              <p className="text-xs text-green-500">8.3%</p>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm text-right flex items-center gap-4">
+              <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zM6 20v-1c0-2.21 1.79-4 4-4h4c2.21 0 4 1.79 4 4v1" stroke="#1e40af" strokeWidth="1.2" fill="none"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">مناقصات نشطة</div>
+                <div className="text-2xl font-bold text-tawreed-green">4,020</div>
+                <div className="text-xs text-green-500">15.2% ↑</div>
+              </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm w-52 text-right">
-              <p className="text-xs text-gray-500">عروض مقدمة</p>
-              <p className="text-2xl font-bold">1,719,931</p>
-              <p className="text-xs text-green-500">12.5%</p>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm text-right flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <path d="M9 12a4 4 0 1 1 6 0" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                  <path d="M21 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" stroke="#15803d" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-gray-500">موردين نشطين</div>
+                <div className="text-2xl font-bold text-tawreed-green">892</div>
+                <div className="text-xs text-green-500">5.7% ↑</div>
+              </div>
             </div>
           </div>
         </div>
@@ -85,7 +125,15 @@ export default function BuyerHome() {
                   <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border">15</div>
                   <div className="text-sm text-gray-600 text-right">موعد انتهاء التقديم: 2025-08-04</div>
                 </div>
-                <div className="text-sm text-gray-600 text-right">عدد العروض: 2</div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-600">عدد العروض: 2</span>
+                  <span className="px-2 py-1 bg-green-600 text-white rounded-full text-xs">مباشر</span>
+                </div>
+                <div className="mt-1 flex gap-2 flex-wrap">
+                  <span className="px-3 py-1 bg-green-100 text-sm text-green-800 rounded-full">مقاولات</span>
+                  <span className="px-3 py-1 bg-green-100 text-sm text-green-800 rounded-full">ترميم</span>
+                  <span className="px-3 py-1 bg-green-100 text-sm text-green-800 rounded-full">تصليح</span>
+                </div>
               </div>
 
               <div className="flex items-center justify-between mb-2">
@@ -94,12 +142,18 @@ export default function BuyerHome() {
                   <p className="font-bold">1000 ريال</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <a href="/tender/25073901054" className="px-3 py-1 bg-white border rounded inline-block text-center">التفاصيل</a>
-                  <button className="px-3 py-1 bg-tawreed-green text-white rounded">العروض المقدمة</button>
+                  <Link to="/tender/25073901054/offers" className="inline-flex items-center gap-2 px-3 py-1 bg-tawreed-green text-white rounded">
+                    {/* offers svg */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <path d="M3 7h18M7 11h10M9 15h6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    العروض المقدمة
+                  </Link>
+                  <Link to="/tender/25073901054" className="px-3 py-1 bg-white border rounded inline-block text-center">التفاصيل</Link>
                 </div>
               </div>
 
-              <div className="text-xs text-gray-400">رقم المرجع: 25073901054 | تاريخ النشر: 2025-08-01</div>
+              <div className="text-xs text-gray-400 mt-3">رقم المرجع: 25073901054 | تاريخ النشر: 2025-08-01</div>
             </div>
           </div>
         </div>
