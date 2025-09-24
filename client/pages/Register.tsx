@@ -1,5 +1,7 @@
 import { useState } from "react";
+import Select from "react-select";
 import { Link } from "react-router-dom";
+
 
 export default function Register() {
   const [currentStep, setCurrentStep] = useState(1); // Start from step 1
@@ -10,10 +12,40 @@ export default function Register() {
   const [location, setLocation] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [activityDescription, setActivityDescription] = useState("");
-  const [certificates, setCertificates] = useState("");
-  const [licenses, setLicenses] = useState("");
+  const [certificates, setCertificates] = useState<{ value: string; label: string }[]>([]);
+  const [licenses, setLicenses] = useState<{ value: string; label: string }[]>([]);
+  const [coordinatorName, setCoordinatorName] = useState("");
+  const [coordinatorEmail, setCoordinatorEmail] = useState("");
+  const [coordinatorMobile, setCoordinatorMobile] = useState("");
+
+  // Example: Replace with your real data source for large lists
+  const certificateOptions: { value: string; label: string }[] = Array.from({ length: 100 }, (_, i) => ({ value: `cert${i+1}`, label: `شهادة رقم ${i+1}` }));
+  const licenseOptions: { value: string; label: string }[] = Array.from({ length: 100 }, (_, i) => ({ value: `license${i+1}`, label: `ترخيص رقم ${i+1}` }));
 
   const steps = [1, 2, 3, 4]; // Remove step 5
+
+  const handleSubmit = () => {
+    const payload = {
+      commercialRegNumber,
+      institutionName,
+      institutionType,
+      location,
+      mobileNumber,
+      activityDescription,
+      certificates,
+      licenses,
+      coordinator: {
+        name: coordinatorName,
+        email: coordinatorEmail,
+        mobile: coordinatorMobile,
+      },
+    };
+    // TODO: send payload to server. For now, just log it.
+    // Replace with fetch('/api/register', { method: 'POST', body: JSON.stringify(payload) }) etc.
+    // eslint-disable-next-line no-console
+    console.log('submit payload', payload);
+    alert('تم إرسال النموذج. تحقق من الكونسول (console) للتفاصيل.');
+  };
 
   return (
     <div className="min-h-screen bg-white px-14 py-16" dir="rtl">
@@ -191,7 +223,7 @@ export default function Register() {
                   />
                 </div>
               </>
-            ) : (
+            ) : currentStep === 3 ? (
               <>
                 {/* Step 3: Description and Requirements */}
                 <h2 className="text-xl font-bold text-tawreed-text-dark mb-6 text-right font-arabic">
@@ -219,23 +251,18 @@ export default function Register() {
                     شهادات الموسسة (شهادة الزكاة، شهادة السعودة...)
                   </label>
                   <div className="relative">
-                    <select
+                    <Select
+                      isMulti
+                      options={certificateOptions}
                       value={certificates}
-                      onChange={(e) => setCertificates(e.target.value)}
-                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
-                      dir="rtl"
-                    >
-                      <option value="">اختر الشهادات</option>
-                      <option value="zakat">شهادة الزكاة</option>
-                      <option value="saudization">شهادة السعودة</option>
-                      <option value="gosi">شهادة التأمينات الاجتماعية</option>
-                      <option value="chamber">شهادة الغ��فة التجارية</option>
-                    </select>
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
-                        <path d="M4 6L8 10L12 6" stroke="#22262A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
+                      onChange={(selected: any) => setCertificates(selected ? [...selected] : [])}
+                      placeholder="اختر الشهادات..."
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (base) => ({ ...base, direction: 'rtl', fontFamily: 'inherit', fontSize: '1rem', borderColor: '#E5E7EB' }),
+                        menu: (base) => ({ ...base, direction: 'rtl', fontFamily: 'inherit', fontSize: '1rem' })
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -245,23 +272,63 @@ export default function Register() {
                     التراخيص المربوطة بنشاط المؤسسة
                   </label>
                   <div className="relative">
-                    <select
+                    <Select
+                      isMulti
+                      options={licenseOptions}
                       value={licenses}
-                      onChange={(e) => setLicenses(e.target.value)}
-                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
+                      onChange={(selected: any) => setLicenses(selected ? [...selected] : [])}
+                      placeholder="اختر التراخيص..."
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (base) => ({ ...base, direction: 'rtl', fontFamily: 'inherit', fontSize: '1rem', borderColor: '#E5E7EB' }),
+                        menu: (base) => ({ ...base, direction: 'rtl', fontFamily: 'inherit', fontSize: '1rem' })
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Step 4: Contact info (matches screenshot) */}
+                <h2 className="text-xl font-bold text-tawreed-text-dark mb-6 text-right font-arabic">
+                  معلومات التواصل
+                </h2>
+
+                <div className="bg-white border border-tawreed-border-gray rounded-xl shadow-sm p-6 mb-8 max-w-4xl mx-auto">
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">اسم المنسق *</label>
+                    <input
+                      type="text"
+                      value={coordinatorName}
+                      onChange={(e) => setCoordinatorName(e.target.value)}
+                      placeholder="أدخل اسم ممثل المؤسسة"
+                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                       dir="rtl"
-                    >
-                      <option value="">اختر التراخيص</option>
-                      <option value="commercial">الرخصة التجارية</option>
-                      <option value="industrial">الرخصة الصناعية</option>
-                      <option value="construction">رخصة المقاولات</option>
-                      <option value="professional">الرخصة المهنية</option>
-                    </select>
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
-                        <path d="M4 6L8 10L12 6" stroke="#22262A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">البريد الإلكتروني *</label>
+                    <input
+                      type="email"
+                      value={coordinatorEmail}
+                      onChange={(e) => setCoordinatorEmail(e.target.value)}
+                      placeholder="example@domain.com"
+                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
+                      dir="rtl"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">رقم الجوال *</label>
+                    <input
+                      type="tel"
+                      value={coordinatorMobile}
+                      onChange={(e) => setCoordinatorMobile(e.target.value)}
+                      placeholder="05xxxxxxxx"
+                      className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
+                      dir="rtl"
+                    />
                   </div>
                 </div>
               </>
@@ -270,13 +337,22 @@ export default function Register() {
 
           {/* Action Buttons */}
           <div className="flex justify-between items-center">
-            {/* Next Button */}
-            <button
-              onClick={() => setCurrentStep(Math.min(currentStep + 1, 4))}
-              className="px-4 py-2.5 bg-gradient-to-r from-tawreed-green to-tawreed-green-light text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all"
-            >
-              التالي
-            </button>
+            {/* Next / Submit Button */}
+            {currentStep < 4 ? (
+              <button
+                onClick={() => setCurrentStep(Math.min(currentStep + 1, 4))}
+                className="px-4 py-2.5 bg-gradient-to-r from-tawreed-green to-tawreed-green-light text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all"
+              >
+                التالي
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2.5 bg-tawreed-green text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all"
+              >
+                إنهاء التسجيل
+              </button>
+            )}
 
             <div className="flex gap-2">
               {/* Login Button */}
