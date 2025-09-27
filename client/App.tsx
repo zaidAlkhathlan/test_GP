@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import BuyerHome from "./pages/BuyerHome";
+import BuyerSignIn from "./pages/BuyerSignIn";
 import NotFound from "./pages/NotFound";
 import TenderDetails from "./pages/TenderDetails";
 import TenderOffers from "./pages/TenderOffers";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/register" element={<Register />} />
           <Route path="/buyer" element={<BuyerHome />} />
+          <Route path="/buyer/signin" element={<BuyerSignIn />} />
           <Route path="/tenders/active" element={<ActiveTenders />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />

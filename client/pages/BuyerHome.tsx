@@ -30,7 +30,7 @@ export default function BuyerHome() {
                   <span className="inline-block w-8 h-8 bg-gray-100 rounded-full"></span>
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span>
                 </button>
-                <button className="px-3 py-1 border rounded text-sm">حسابي</button>
+                <Link to="/buyer/signin" className="px-3 py-1 border rounded text-sm">حسابي</Link>
               </div>
               <div className="text-tawreed-green font-bold">توريد</div>
             </div>

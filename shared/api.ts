@@ -10,3 +10,21 @@
 export interface DemoResponse {
   message: string;
 }
+
+export interface Buyer {
+  id?: number;
+  commercial_registration_number: string;
+  commercial_phone_number: string;
+  industry: string;
+  company_name: string;
+  city: string;
+  logo?: string | null;
+  account_name: string;
+  account_email: string;
+  account_phone: string;
+  account_password: string;
+  licenses?: string | null;
+  certificates?: string | null;
+  created_at?: string;
+  updated_at?: string | null;
+}

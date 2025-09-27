@@ -56,9 +56,14 @@ export default function Index() {
                 </svg>
               </div>
               <div className="flex-1 text-right">
-                <h3 className="text-lg font-bold text-tawreed-text-dark mb-1 font-arabic">
-                  تسجيل دخول مشتري
-                </h3>
+              
+                      <h3 className="text-lg font-bold text-tawreed-text-dark mb-1 font-arabic">
+                        <Link to="/buyer/signin">تسجيل دخول مشتري</Link>
+                      
+                    </h3>
+            
+                
+                  
                 <p className="text-sm text-tawreed-text-gray font-arabic">
                   للجهات الحكومية والشركات الباحثة عن موردين
                 </p>

@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { initDatabase } from "./db";
+import { createBuyer } from "./routes/buyers";
 
 export function createServer() {
   const app = express();
@@ -18,6 +20,9 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  // Initialize DB and mount buyer route
+  initDatabase();
+  app.post("/api/buyers", createBuyer);
 
   return app;
 }
