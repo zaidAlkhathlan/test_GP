@@ -28,3 +28,21 @@ export interface Buyer {
   created_at?: string;
   updated_at?: string | null;
 }
+
+export interface LoginRequest {
+  account_email: string;
+  account_password: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  buyer?: {
+    id: number;
+    company_name: string;
+    account_name: string;
+    account_email: string;
+    city: string;
+    industry: string;
+  };
+  message?: string;
+}

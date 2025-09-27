@@ -20,11 +20,11 @@ export default function Index() {
 
         {/* Login Cards */}
         <div className="space-y-4 mb-8">
-          {/* Buyer Login Card */}
-          <div className="bg-white rounded-xl border-2 border-tawreed-border-gray p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-tawreed-green to-tawreed-green-light rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
-                <svg
+        <Link to="/buyer/signin" className="block">
+  <div className="bg-white rounded-xl border-2 border-tawreed-border-gray p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+    <div className="flex items-center gap-4">
+      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-tawreed-green to-tawreed-green-light rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
+         <svg
                   width="24"
                   height="24"
                   viewBox="0 0 24 24"
@@ -54,22 +54,18 @@ export default function Index() {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
-              <div className="flex-1 text-right">
-              
-                      <h3 className="text-lg font-bold text-tawreed-text-dark mb-1 font-arabic">
-                        <Link to="/buyer/signin">تسجيل دخول مشتري</Link>
-                      
-                    </h3>
-            
-                
-                  
-                <p className="text-sm text-tawreed-text-gray font-arabic">
-                  للجهات الحكومية والشركات الباحثة عن موردين
-                </p>
-              </div>
-            </div>
-          </div>
+      </div>
+      <div className="flex-1 text-right">
+        <h3 className="text-lg font-bold text-tawreed-text-dark mb-1 font-arabic">
+          تسجيل دخول مشتري
+        </h3>
+        <p className="text-sm text-tawreed-text-gray font-arabic">
+          للجهات الحكومية والشركات الباحثة عن موردين
+        </p>
+      </div>
+    </div>
+  </div>
+</Link>
 
           {/* Supplier Login Card */}
           <div className="bg-white rounded-xl border-2 border-tawreed-border-gray p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">

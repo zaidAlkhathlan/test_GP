@@ -3,9 +3,15 @@ import { db } from "../db";
 import { Buyer } from "@shared/api";
 
 export const createBuyer: RequestHandler = (req, res) => {
+  console.log("🔵 createBuyer endpoint called");
+  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+  
   const b: Buyer = req.body;
 
-  const stmt = db.prepare(`
+  // Use the run method with the database wrapper
+  console.log("🗄️ Attempting to insert buyer into database...");
+  
+  db.run(`
     INSERT INTO Buyer (
       commercial_registration_number,
       commercial_phone_number,
@@ -20,9 +26,7 @@ export const createBuyer: RequestHandler = (req, res) => {
       licenses,
       certificates
     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-  `);
-
-  stmt.run(
+  `, [
     b.commercial_registration_number,
     b.commercial_phone_number,
     b.industry,
@@ -34,26 +38,33 @@ export const createBuyer: RequestHandler = (req, res) => {
     b.account_phone,
     b.account_password,
     b.licenses || null,
-    b.certificates || null,
-    function (this: any, err: Error | null) {
-      if (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to create buyer" });
+    b.certificates || null
+  ], function (this: any, err: Error | null) {
+    if (err) {
+      console.error("❌ Database insert error:", err);
+      res.status(500).json({ error: "Failed to create buyer" });
+      return;
+    }
+    
+    const id = this.lastID;
+    console.log("✅ Buyer inserted successfully with ID:", id);
+    
+    db.get("SELECT * FROM Buyer WHERE id = ?", [id], (err2: Error | null, row: any) => {
+      if (err2) {
+        console.error("❌ Database fetch error:", err2);
+        res.status(500).json({ error: "Failed to fetch created buyer" });
         return;
       }
-      const id = this.lastID as number;
-      db.get("SELECT * FROM Buyer WHERE id = ?", [id], (err2, row: any) => {
-        if (err2) {
-          res.status(500).json({ error: "Failed to fetch created buyer" });
-          return;
-        }
-        if (row) {
-          // Do not return the stored password
-          delete row.account_password;
-        }
-        res.status(201).json(row);
-      });
-    }
-  );
-  stmt.finalize();
+      
+      console.log("📖 Retrieved buyer:", row);
+      
+      if (row) {
+        // Do not return the stored password
+        delete row.account_password;
+      }
+      
+      console.log("📤 Sending response:", row);
+      res.status(201).json(row);
+    });
+  });
 };

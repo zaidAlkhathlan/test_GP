@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import initSqlJs from "sql.js";
 
 const dataDir = path.resolve(process.cwd(), "data");
 if (!fs.existsSync(dataDir)) {
@@ -8,10 +9,18 @@ if (!fs.existsSync(dataDir)) {
 
 const dbPath = path.join(dataDir, "app.db");
 
-// exported `db` will be assigned either to a sqlite3 Database or to an in-memory fallback
-export let db: any;
+// Define database interface for compatibility
+interface DatabaseWrapper {
+  run(sql: string, params: any[], callback?: (this: any, err: Error | null) => void): { lastID: number };
+  get(sql: string, params: any[], callback: (err: Error | null, row?: any) => void): void;
+  all(sql: string, params: any[], callback: (err: Error | null, rows?: any[]) => void): void;
+  serialize(callback: () => void): void;
+}
 
-export function initDatabase() {
+// exported `db` will be a database wrapper
+export let db: DatabaseWrapper;
+
+export async function initDatabase() {
   const createTable = `
     CREATE TABLE IF NOT EXISTS Buyer (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,89 +42,124 @@ export function initDatabase() {
   `;
 
   try {
-    // Try to load native sqlite3. If it fails (missing binding), fall back.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const sqlite3 = require("sqlite3");
-    const sqlite = sqlite3.verbose();
-    db = new sqlite.Database(dbPath);
-    db.serialize(() => {
-      db.run(createTable);
-    });
-    console.log("SQLite database initialized at", dbPath);
-  } catch (err) {
-    console.warn("sqlite3 native bindings not available — falling back to in-memory DB for development.");
-
-    // Simple in-memory fallback implementing run(sql, params..., cb) and get(sql, params..., cb)
-    const rows: any[] = [];
-    let autoId = 1;
-
-    db = {
-      run(sql: string, params: any[], cb?: (err: Error | null) => void) {
+    // Initialize sql.js
+    const SQL = await initSqlJs();
+    
+    // Load existing database file or create new one
+    let dbData: Uint8Array | undefined;
+    if (fs.existsSync(dbPath)) {
+      dbData = fs.readFileSync(dbPath);
+      console.log("📖 Loading existing database from", dbPath);
+    } else {
+      console.log("🆕 Creating new database at", dbPath);
+    }
+    
+    const realDb = new SQL.Database(dbData);
+    
+    // Create the table
+    realDb.run(createTable);
+    
+    // Save database to file
+    const data = realDb.export();
+    fs.writeFileSync(dbPath, data);
+    
+    console.log("✅ SQLite database initialized successfully at", dbPath);
+    console.log("📁 Database file created:", fs.existsSync(dbPath) ? "YES" : "NO");
+    
+    // Create a wrapper object to maintain compatibility with old sqlite3 API
+    const dbWrapper: DatabaseWrapper = {
+      run(sql: string, params: any[], callback?: (this: any, err: Error | null) => void) {
         try {
-          // Very naive INSERT parsing for the expected query shape used in routes
-          if (/INSERT INTO Buyer/i.test(sql)) {
-            const [
-              commercial_registration_number,
-              commercial_phone_number,
-              industry,
-              company_name,
-              city,
-              logo,
-              account_name,
-              account_email,
-              account_phone,
-              account_password,
-              licenses,
-              certificates,
-            ] = params;
-
-            const row = {
-              id: autoId++,
-              commercial_registration_number,
-              commercial_phone_number,
-              industry,
-              company_name,
-              city,
-              logo,
-              account_name,
-              account_email,
-              account_phone,
-              account_password,
-              licenses,
-              certificates,
-              created_at: new Date().toISOString(),
-              updated_at: null,
-            };
+          console.log("🔧 SQL run:", sql);
+          console.log("🔧 Params:", params);
+          
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          const result = stmt.step();
+          
+          // Get the last insert rowid
+          const lastID = realDb.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0] as number || 0;
+          
+          console.log("🔧 Insert result - lastID:", lastID);
+          
+          stmt.free();
+          
+          // Save database after modification
+          const data = realDb.export();
+          fs.writeFileSync(dbPath, data);
+          console.log("💾 Database saved to file");
+          
+          if (callback) {
+            callback.call({ lastID }, null);
+          }
+          
+          return { lastID };
+        } catch (err: any) {
+          console.error("🔧 Database run error:", err);
+          if (callback) {
+            callback.call({}, err);
+          }
+          throw err;
+        }
+      },
+      
+      get(sql: string, params: any[], callback: (err: Error | null, row?: any) => void) {
+        try {
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          
+          let row: any = null;
+          if (stmt.step()) {
+            const columns = stmt.getColumnNames();
+            const values = stmt.get();
+            row = {};
+            columns.forEach((col, index) => {
+              row[col] = values[index];
+            });
+          }
+          
+          stmt.free();
+          callback(null, row);
+        } catch (err: any) {
+          callback(err, undefined);
+        }
+      },
+      
+      all(sql: string, params: any[], callback: (err: Error | null, rows?: any[]) => void) {
+        try {
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          
+          const rows: any[] = [];
+          const columns = stmt.getColumnNames();
+          
+          while (stmt.step()) {
+            const values = stmt.get();
+            const row: any = {};
+            columns.forEach((col, index) => {
+              row[col] = values[index];
+            });
             rows.push(row);
-            // simulate this.lastID via callback context
-            if (cb) cb(null as any);
-          } else {
-            if (cb) cb(null as any);
           }
-        } catch (e: any) {
-          if (cb) cb(e);
-        }
-        // return an object with lastID for compatibility when caller uses function's this
-        return { lastID: autoId - 1 };
-      },
-      get(sql: string, params: any[], cb: (err: Error | null, row?: any) => void) {
-        try {
-          const m = sql.match(/WHERE id = \?/i);
-          if (m) {
-            const id = params[0];
-            const found = rows.find((r) => r.id === id);
-            cb(null, found || null);
-            return;
-          }
-          cb(null, null);
-        } catch (e: any) {
-          cb(e, undefined);
+          
+          stmt.free();
+          callback(null, rows);
+        } catch (err: any) {
+          callback(err, undefined);
         }
       },
-      serialize(cb: () => void) {
-        cb();
-      },
+      
+      serialize(callback: () => void) {
+        callback();
+      }
     };
+    
+    // Assign the wrapper to db
+    db = dbWrapper;
+    
+  } catch (err: any) {
+    console.error("❌ Failed to initialize SQLite database:", err.message);
+    throw err;
   }
 
   return db;

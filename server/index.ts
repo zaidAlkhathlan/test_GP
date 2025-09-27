@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { initDatabase } from "./db";
 import { createBuyer } from "./routes/buyers";
+import { loginBuyer } from "./routes/auth";
 
 export function createServer() {
   const app = express();
@@ -20,9 +21,15 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
-  // Initialize DB and mount buyer route
-  initDatabase();
+  
+  // Mount routes first, initialize DB in background
   app.post("/api/buyers", createBuyer);
+  app.post("/api/auth/login", loginBuyer);
+  
+  // Initialize DB in background
+  initDatabase().catch((error) => {
+    console.error("Failed to initialize database:", error);
+  });
 
   return app;
 }

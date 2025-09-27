@@ -1,7 +1,36 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function BuyerHome() {
+  const [currentBuyer, setCurrentBuyer] = useState<any>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if buyer is logged in
+    const buyerData = localStorage.getItem('currentBuyer');
+    if (buyerData) {
+      setCurrentBuyer(JSON.parse(buyerData));
+    } else {
+      // Redirect to sign in if not logged in
+      navigate('/buyer/signin');
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentBuyer');
+    navigate('/buyer/signin');
+  };
+
+  if (!currentBuyer) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg">جاري التحميل...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-8 py-6">
@@ -9,7 +38,9 @@ export default function BuyerHome() {
         <header className="mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">مؤسسة: اسم المنشأة</button>
+              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">
+                مؤسسة: {currentBuyer.company_name}
+              </button>
               <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
                 <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
                 <a className="hover:underline">المناقصات المنتهية</a>
@@ -30,7 +61,17 @@ export default function BuyerHome() {
                   <span className="inline-block w-8 h-8 bg-gray-100 rounded-full"></span>
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span>
                 </button>
-                <Link to="/buyer/signin" className="px-3 py-1 border rounded text-sm">حسابي</Link>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">
+                    مرحباً، {currentBuyer.account_name}
+                  </span>
+                  <button 
+                    onClick={handleLogout}
+                    className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
+                  >
+                    تسجيل الخروج
+                  </button>
+                </div>
               </div>
               <div className="text-tawreed-green font-bold">توريد</div>
             </div>
