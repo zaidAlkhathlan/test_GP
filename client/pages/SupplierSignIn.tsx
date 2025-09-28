@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LoginRequest, LoginResponse } from '@shared/api';
+import { SupplierLoginRequest, SupplierLoginResponse } from '@shared/api';
 
-export default function BuyerSignIn() {
+export default function SupplierSignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,12 +21,12 @@ export default function BuyerSignIn() {
     setError('');
 
     try {
-      const loginData: LoginRequest = {
+      const loginData: SupplierLoginRequest = {
         account_email: email,
         account_password: password
       };
 
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/supplier/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,14 +34,14 @@ export default function BuyerSignIn() {
         body: JSON.stringify(loginData)
       });
 
-      const result: LoginResponse = await response.json();
+      const result: SupplierLoginResponse = await response.json();
 
-      if (result.success && result.buyer) {
-        // Store buyer info in localStorage for the session
-        localStorage.setItem('currentBuyer', JSON.stringify(result.buyer));
+      if (result.success && result.supplier) {
+        // Store supplier info in localStorage for the session
+        localStorage.setItem('currentSupplier', JSON.stringify(result.supplier));
         
-        // Navigate to buyer home page
-        navigate('/buyer/home');
+        // Navigate to supplier home page
+        navigate('/supplier/home');
       } else {
         setError(result.message || 'فشل في تسجيل الدخول');
       }
@@ -59,7 +59,7 @@ export default function BuyerSignIn() {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-green-600 mb-2">توريد</h1>
-          <h2 className="text-lg font-semibold text-gray-800 mb-1">تسجيل الدخول المشتري</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">تسجيل الدخول المورد</h2>
           <p className="text-sm text-gray-500">
             أدخل بياناتك للدخول إلى بوابة المورد والمشترين
           </p>
@@ -116,9 +116,9 @@ export default function BuyerSignIn() {
         {/* Footer Link */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-500">
-            <Link to="/" className="text-green-600 hover:text-green-700">
-              العودة للصفحة الرئيسية
-            </Link>
+             <Link to="/" className="text-green-600 hover:text-green-700">
+                          العودة للصفحة الرئيسية
+              </Link>
           </p>
           <p className="text-xs text-gray-400 mt-2">
             بالنقر على تسجيل الدخول فإنك تتفق مع شروط الخدمة

@@ -4,7 +4,8 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { initDatabase } from "./db";
 import { createBuyer } from "./routes/buyers";
-import { loginBuyer } from "./routes/auth";
+import { loginBuyer } from "./routes/buyer-auth";
+import { loginSupplier } from "./routes/supplier-auth";
 
 export function createServer() {
   const app = express();
@@ -25,6 +26,7 @@ export function createServer() {
   // Mount routes first, initialize DB in background
   app.post("/api/buyers", createBuyer);
   app.post("/api/auth/login", loginBuyer);
+  app.post("/api/auth/supplier/login", loginSupplier);
   
   // Initialize DB in background
   initDatabase().catch((error) => {

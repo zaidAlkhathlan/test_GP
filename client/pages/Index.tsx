@@ -68,6 +68,7 @@ export default function Index() {
 </Link>
 
           {/* Supplier Login Card */}
+          <Link to="/supplier/signin" className="block">
           <div className="bg-white rounded-xl border-2 border-tawreed-border-gray p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-tawreed-green to-[rgba(50,164,79,0.8)] rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -140,6 +141,7 @@ export default function Index() {
               </div>
             </div>
           </div>
+          </Link>
         </div>
 
         {/* Footer */}
