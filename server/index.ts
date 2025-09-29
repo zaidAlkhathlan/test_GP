@@ -6,6 +6,7 @@ import { initDatabase } from "./db";
 import { createBuyer } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
+import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 
 export function createServer() {
   const app = express();
@@ -27,6 +28,10 @@ export function createServer() {
   app.post("/api/buyers", createBuyer);
   app.post("/api/auth/login", loginBuyer);
   app.post("/api/auth/supplier/login", loginSupplier);
+  // Inquiries routes
+  app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
+  app.post('/api/tenders/:id/inquiries', createInquiry);
+  app.post('/api/inquiries/:id/answer', answerInquiry);
   
   // Initialize DB in background
   initDatabase().catch((error) => {

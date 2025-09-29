@@ -82,3 +82,14 @@ export interface SupplierLoginResponse {
   };
   message?: string;
 }
+
+export interface Inquiry {
+  id?: number;
+  tender_id: string;
+  supplier_id?: number; // supplier ID is stored but not shown to other suppliers
+  question_text: string;
+  created_at?: string;
+  answer_text?: string | null;
+  answer_at?: string | null;
+  buyer_name?: string | null;
+}

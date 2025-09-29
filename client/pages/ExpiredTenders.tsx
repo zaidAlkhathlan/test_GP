@@ -1,15 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export default function ActiveTenders() {
+export default function ExpiredTenders() {
   const sampleTenders = Array.from({ length: 3 }).map((_, i) => ({
-    id: `t${i + 1}`,
+    id: `e${i + 1}`,
     title: i === 2 ? 'إنشاء بوابة أمنية على طريق السلامة بخشم النجار' : 'بناء ورشة سيارات',
     org: 'مؤسسة نماء للمشتريات',
     endDate: '2025-08-04',
     offers: 8,
     visits: 12,
-    daysLeft: 15,
+    daysLeft: 0,
     budget: '1000 ريال'
   }));
 
@@ -23,7 +23,7 @@ export default function ActiveTenders() {
               <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">مؤسسة: اسم المنشأة</button>
               <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
                 <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
-                <a className="hover:underline">المناقصات المنتهية</a>
+                <Link to="/tenders/expired" className="hover:underline">المناقصات المنتهية</Link>
                 <a className="hover:underline">من نحن</a>
                 <a className="hover:underline">اتصل بنا</a>
               </div>
@@ -51,19 +51,19 @@ export default function ActiveTenders() {
         <div className="flex items-start gap-6" dir="rtl">
           <main className="flex-1">
             <div className="text-right mb-6">
-              <h1 className="text-2xl font-bold">البحث في مناقصاتي</h1>
-              <p className="text-sm text-gray-500">ابحث واعثر على المناقصات المناسبة لك</p>
+              <h1 className="text-2xl font-bold">المناقصات المنتهية</h1>
+              <p className="text-sm text-gray-500">قائمة بالمناقصات التي انتهت مواعيد تقديم العروض</p>
             </div>
 
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <select className="border rounded px-3 py-2">
                   <option>ترتيب حسب</option>
-                  <option>تاريخ النشر</option>
+                  <option>تاريخ الانتهاء</option>
                 </select>
               </div>
               <div>
-                <Link to="/tenders/new" className="bg-tawreed-green text-white px-4 py-2 rounded inline-block">نشر مناقصة جديدة</Link>
+                <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded">تصدير القائمة</button>
               </div>
             </div>
 
@@ -77,20 +77,20 @@ export default function ActiveTenders() {
                     </div>
                     <div className="text-left">
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">مقاولات</span>
-                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">تصليح</span>
+                        <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">مقاولات</span>
+                        <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">تصليح</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 bg-green-50 p-3 rounded">
+                  <div className="mt-4 bg-gray-50 p-3 rounded">
                     <div className="flex items-center gap-4 justify-between">
                       <div className="text-right">
-                        <div className="text-sm text-gray-600">موعد انتهاء التقديم: {t.endDate}</div>
+                        <div className="text-sm text-gray-600">تاريخ الانتهاء: {t.endDate}</div>
                         <div className="text-xs text-gray-400">عدد العروض: {t.offers}</div>
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-bold text-tawreed-green">{t.daysLeft}</div>
+                        <div className="text-sm font-bold text-gray-600">منتهية</div>
                       </div>
                     </div>
                   </div>
@@ -102,10 +102,7 @@ export default function ActiveTenders() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Link to={`/tender/${t.id}`} className="px-3 py-1 bg-white border rounded">التفاصيل</Link>
-                      <Link to={`/tender/${t.id}/offers`} className="px-3 py-1 bg-tawreed-green text-white rounded inline-flex items-center gap-2">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3 7h18M7 11h10M9 15h6" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                      <Link to={`/tender/${t.id}/offers`} className="px-3 py-1 bg-gray-500 text-white rounded inline-flex items-center gap-2">
                         العروض المقدمة
                       </Link>
                     </div>
@@ -125,8 +122,8 @@ export default function ActiveTenders() {
               <div className="mt-4">
                 <p className="text-sm text-gray-500">حالة المناقصة</p>
                 <div className="mt-2 space-y-2">
-                  <label className="flex items-center gap-2"><input type="checkbox" /> نشطة</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" /> قيد المراجعة</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" /> منتهية</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" /> ملغاة</label>
                 </div>
               </div>
             </div>

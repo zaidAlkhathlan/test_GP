@@ -14,6 +14,9 @@ import NotFound from "./pages/NotFound";
 import TenderDetails from "./pages/TenderDetails";
 import TenderOffers from "./pages/TenderOffers";
 import ActiveTenders from "./pages/ActiveTenders";
+import ExpiredTenders from "./pages/ExpiredTenders";
+import Quires from "./pages/Quires";
+import CreateTender from "./pages/CreateTender";
 import SupplierSignIn from "./pages/SupplierSignIn";
 import SupplierHome from "./pages/SupplierHome";
 
@@ -32,6 +35,9 @@ const App = () => (
           <Route path="/buyer/home" element={<BuyerHome />} />
           <Route path="/buyer/signin" element={<BuyerSignIn />} />
           <Route path="/tenders/active" element={<ActiveTenders />} />
+          <Route path="/tenders/expired" element={<ExpiredTenders />} />
+          <Route path="/tenders/new" element={<CreateTender />} />
+          <Route path="/tender/:id/quires" element={<Quires />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />
           <Route path="/supplier/signin" element={<SupplierSignIn />} />

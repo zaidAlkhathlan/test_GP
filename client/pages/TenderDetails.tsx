@@ -91,10 +91,10 @@ export default function TenderDetails() {
               </div>
             </div>
             <div className="bg-white rounded p-4 text-right shadow flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">👥</div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">❓</div>
               <div>
-                <p className="text-xs text-gray-500">عدد الزيارات</p>
-                <p className="text-xl font-bold">12</p>
+                <p className="text-xs text-gray-500">عدد الاستفسارات</p>
+                <Link to={id ? `/tender/${id}/quires` : '#'} className="text-xl font-bold text-tawreed-green">عرض الاستفسارات</Link>
               </div>
             </div>
           </div>

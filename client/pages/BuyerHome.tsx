@@ -43,7 +43,7 @@ export default function BuyerHome() {
               </button>
               <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
                 <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
-                <a className="hover:underline">المناقصات المنتهية</a>
+                <Link to="/tenders/expired" className="hover:underline">المناقصات المنتهية</Link>
                 <a className="hover:underline">من نحن</a>
                 <a className="hover:underline">اتصل بنا</a>
               </div>
@@ -90,9 +90,9 @@ export default function BuyerHome() {
         {/* Stats row with four small white cards (icon + large green number + small percent) */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">نشر مناقصة جديدة</button>
-            </div>
+      <div className="flex items-center gap-3">
+        <Link to="/tenders/new" className="bg-tawreed-green text-white px-3 py-1 rounded-md inline-flex items-center">نشر مناقصة جديدة</Link>
+      </div>
             <div className="text-right">
               <h3 className="text-base font-semibold">الإحصائيات الحية</h3>
             </div>
@@ -214,7 +214,7 @@ export default function BuyerHome() {
               </div>
               <div className="flex items-center gap-3">
                 <button className="px-4 py-2 bg-white border rounded">استعراض الموردين</button>
-                <button className="px-4 py-2 bg-tawreed-green text-white rounded">انشاء مناقصة جديدة</button>
+                <Link to="/tenders/new" className="px-4 py-2 bg-tawreed-green text-white rounded inline-block text-center">انشاء مناقصة جديدة</Link>
               </div>
             </div>
           </div>
