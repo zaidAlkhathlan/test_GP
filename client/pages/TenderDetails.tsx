@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import Header from '../components/Header';
 
 export default function TenderDetails() {
   const { id } = useParams();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-[900px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-50">
+      <Header userType="buyer" />
+      <div className="max-w-[900px] mx-auto px-6 py-10">
         <div className="bg-white rounded-lg shadow p-6" dir="rtl">
           <div className="flex items-center justify-between mb-4">
             <div className="text-right">

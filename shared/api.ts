@@ -11,6 +11,29 @@ export interface DemoResponse {
   message: string;
 }
 
+/**
+ * Domain and sub-domain types
+ */
+export interface Domain {
+  ID: number;
+  Name: string;
+}
+
+export interface SubDomain {
+  ID: number;
+  domain_id: number;
+  Name: string;
+  domain_name?: string; // Optional, only present when joined with domain
+}
+
+export interface DomainsResponse {
+  domains: Domain[];
+}
+
+export interface SubDomainsResponse {
+  subDomains: SubDomain[];
+}
+
 export interface Buyer {
   id?: number;
   commercial_registration_number: string;

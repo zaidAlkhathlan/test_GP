@@ -14,7 +14,7 @@ export interface LoginResponse {
     account_name: string;
     account_email: string;
     city: string;
-    industry: string;
+    domains_id: number;
   };
   message?: string;
 }
@@ -35,7 +35,7 @@ export const loginBuyer: RequestHandler = (req, res) => {
 
   console.log("🔍 Searching for buyer with email:", account_email);
 
-  db.get("SELECT * FROM Buyer WHERE account_email = ?", [account_email], (err: Error | null, row: any) => {
+  db.get("SELECT * FROM Buyer WHERE Account_email = ?", [account_email], (err: Error | null, row: any) => {
     if (err) {
       console.error("❌ Database error:", err);
       return res.status(500).json({
@@ -55,7 +55,7 @@ export const loginBuyer: RequestHandler = (req, res) => {
     console.log("✅ Found buyer:", row.company_name);
 
     // Check password (in production, you should hash passwords)
-    if (row.account_password !== account_password) {
+    if (row.Account_password !== account_password) {
       console.log("❌ Password mismatch");
       return res.status(401).json({
         success: false,
@@ -67,12 +67,12 @@ export const loginBuyer: RequestHandler = (req, res) => {
 
     // Return buyer info without password
     const buyerInfo = {
-      id: row.id,
+      id: row.ID,
       company_name: row.company_name,
-      account_name: row.account_name,
-      account_email: row.account_email,
-      city: row.city,
-      industry: row.industry
+      account_name: row.Account_name,
+      account_email: row.Account_email,
+      city: row.City,
+      domains_id: row.domains_id
     };
 
     res.json({

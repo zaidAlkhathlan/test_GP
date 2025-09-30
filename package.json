@@ -25,7 +25,6 @@
     "express": "^5.1.0",
     "react-select": "^5.10.2",
     "sql.js": "^1.13.0",
-    "sqlite3": "^5.1.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {

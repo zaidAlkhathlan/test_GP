@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Header from '../components/Header';
 
 export default function BuyerHome() {
   const [currentBuyer, setCurrentBuyer] = useState<any>(null);
@@ -16,11 +17,6 @@ export default function BuyerHome() {
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentBuyer');
-    navigate('/buyer/signin');
-  };
-
   if (!currentBuyer) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -33,50 +29,8 @@ export default function BuyerHome() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header userType="buyer" />
       <div className="max-w-[1400px] mx-auto px-8 py-6">
-        {/* Site header: logo, nav, search, user area */}
-        <header className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">
-                مؤسسة: {currentBuyer.company_name}
-              </button>
-              <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
-                <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
-                <Link to="/tenders/expired" className="hover:underline">المناقصات المنتهية</Link>
-                <a className="hover:underline">من نحن</a>
-                <a className="hover:underline">اتصل بنا</a>
-              </div>
-            </div>
-
-            <div className="flex-1 px-6">
-              <div className="max-w-xl mx-auto">
-                <input dir="rtl" placeholder="بحث..." className="w-full px-4 py-2 rounded-lg border border-tawreed-border-gray text-sm" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-3">
-                <button className="relative">
-                  <span className="inline-block w-8 h-8 bg-gray-100 rounded-full"></span>
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span>
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
-                    مرحباً، {currentBuyer.account_name}
-                  </span>
-                  <button 
-                    onClick={handleLogout}
-                    className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
-                  >
-                    تسجيل الخروج
-                  </button>
-                </div>
-              </div>
-              <div className="text-tawreed-green font-bold">توريد</div>
-            </div>
-          </div>
-        </header>
 
         {/* Page title and center CTA */}
         <div className="text-right mb-6">

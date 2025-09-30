@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Select from "react-select";
 import { Link } from "react-router-dom";
+import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from "@shared/api";
 
 
 export default function Register() {
@@ -9,6 +10,8 @@ export default function Register() {
   const [otpCode, setOtpCode] = useState("");
   const [institutionName, setInstitutionName] = useState("");
   const [institutionType, setInstitutionType] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
+  const [selectedSubDomains, setSelectedSubDomains] = useState<{ value: string; label: string }[]>([]);
   const [location, setLocation] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [activityDescription, setActivityDescription] = useState("");
@@ -17,6 +20,71 @@ export default function Register() {
   const [coordinatorName, setCoordinatorName] = useState("");
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorMobile, setCoordinatorMobile] = useState("");
+
+  // Domain and sub-domain data
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [allSubDomains, setAllSubDomains] = useState<SubDomain[]>([]);
+  const [filteredSubDomains, setFilteredSubDomains] = useState<{ value: string; label: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch domains on component mount
+  useEffect(() => {
+    const fetchDomains = async () => {
+      try {
+        setLoading(true);
+        console.log('🔄 Fetching domains from /api/domains...');
+        const response = await fetch('/api/domains');
+        console.log('📡 Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data: DomainsResponse = await response.json();
+        console.log('📊 Domains data received:', data);
+        setDomains(data.domains);
+        console.log('✅ Domains set in state:', data.domains);
+      } catch (error) {
+        console.error('❌ Error fetching domains:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDomains();
+  }, []);
+
+  // Fetch all sub-domains on component mount
+  useEffect(() => {
+    const fetchAllSubDomains = async () => {
+      try {
+        const response = await fetch('/api/sub-domains');
+        const data: SubDomainsResponse = await response.json();
+        setAllSubDomains(data.subDomains);
+      } catch (error) {
+        console.error('Error fetching sub-domains:', error);
+      }
+    };
+
+    fetchAllSubDomains();
+  }, []);
+
+  // Filter sub-domains when domain is selected
+  useEffect(() => {
+    if (selectedDomain && allSubDomains.length > 0) {
+      const domainSubDomains = allSubDomains
+        .filter(sub => sub.domain_id.toString() === selectedDomain)
+        .map(sub => ({
+          value: sub.ID.toString(),
+          label: sub.Name
+        }));
+      setFilteredSubDomains(domainSubDomains);
+      // Clear selected sub-domains when domain changes
+      setSelectedSubDomains([]);
+    } else {
+      setFilteredSubDomains([]);
+    }
+  }, [selectedDomain, allSubDomains]);
 
   // Example: Replace with your real data source for large lists
   const certificateOptions: { value: string; label: string }[] = Array.from({ length: 100 }, (_, i) => ({ value: `cert${i+1}`, label: `شهادة رقم ${i+1}` }));
@@ -29,6 +97,8 @@ export default function Register() {
       commercialRegNumber,
       institutionName,
       institutionType,
+      selectedDomain,
+      selectedSubDomains,
       location,
       mobileNumber,
       activityDescription,
@@ -162,20 +232,24 @@ export default function Register() {
                 {/* Institution Classification */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
-                    تصنيف الموسسة
+                    النشاط الرئيسي
                   </label>
                   <div className="relative">
                     <select
-                      value={institutionType}
-                      onChange={(e) => setInstitutionType(e.target.value)}
+                      value={selectedDomain}
+                      onChange={(e) => setSelectedDomain(e.target.value)}
                       className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
                       dir="rtl"
+                      disabled={loading}
                     >
-                      <option value="">اختر فئة الموسسة</option>
-                      <option value="manufacturing">تصنيع</option>
-                      <option value="services">خدمات</option>
-                      <option value="trading">تجارة</option>
-                      <option value="contracting">مقاولات</option>
+                      <option value="">
+                        {loading ? "جاري التحميل..." : `اختر النشاط الرئيسي (${domains.length})`}
+                      </option>
+                      {domains.map((domain) => (
+                        <option key={domain.ID} value={domain.ID.toString()}>
+                          {domain.Name}
+                        </option>
+                      ))}
                     </select>
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-50">
@@ -183,6 +257,46 @@ export default function Register() {
                       </svg>
                     </div>
                   </div>
+                  
+                  {/* Debug Info */}
+                  <div className="mt-2 text-xs text-gray-600 text-right">
+                    Status: {loading ? 'Loading...' : 'Ready'} | 
+                    Domains: {domains.length} | 
+                    Selected: {selectedDomain || 'None'}
+                  </div>
+                </div>
+                {/* Sub-Domain Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
+                    النشاط الفرعي
+                  </label>
+                  <div className="relative">
+                    <Select
+                      isMulti
+                      options={filteredSubDomains}
+                      value={selectedSubDomains}
+                      onChange={(selected: any) => setSelectedSubDomains(selected ? [...selected] : [])}
+                      placeholder={selectedDomain ? "اختر الأنشطة الفرعية..." : "اختر النشاط الرئيسي أولاً"}
+                      isDisabled={!selectedDomain}
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (base) => ({ 
+                          ...base, 
+                          direction: 'rtl', 
+                          fontFamily: 'inherit', 
+                          fontSize: '1rem', 
+                          borderColor: '#E5E7EB',
+                          opacity: !selectedDomain ? 0.5 : 1
+                        }),
+                        menu: (base) => ({ ...base, direction: 'rtl', fontFamily: 'inherit', fontSize: '1rem' })
+                      }}
+                    />
+                  </div>
+                  {selectedSubDomains.length > 0 && (
+                    <div className="mt-2 text-sm text-tawreed-text-gray text-right">
+                      تم اختيار {selectedSubDomains.length} نشاط فرعي
+                    </div>
+                  )}
                 </div>
 
                 {/* Location */}

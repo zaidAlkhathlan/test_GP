@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import Header from '../components/Header';
 
 export default function TenderOffers() {
   const { id } = useParams();
@@ -74,8 +75,9 @@ export default function TenderOffers() {
   const closeSupplierModal = () => setModalSupplier(null);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-[900px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-50">
+      <Header userType="buyer" />
+      <div className="max-w-[900px] mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-6" dir="rtl">
           <div className="text-right">
             <h2 className="text-xl font-semibold">تقييم العروض المقدمة</h2>

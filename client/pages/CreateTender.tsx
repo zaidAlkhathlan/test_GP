@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Select from 'react-select';
+import Header from '../components/Header';
 
 export default function CreateTender() {
   const [step, setStep] = useState(2); // show step 2 as in screenshot
@@ -22,8 +23,9 @@ export default function CreateTender() {
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
   return (
-    <div className="min-h-screen bg-gray-100 py-12" dir="rtl">
-      <div className="max-w-[1100px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-100" dir="rtl">
+      <Header userType="buyer" />
+      <div className="max-w-[1100px] mx-auto px-6 py-12">
         {/* Page header */}
         <div className="text-right mb-8">
           <h1 className="text-3xl font-bold text-tawreed-text-dark">إنشاء مناقصة جديدة</h1>

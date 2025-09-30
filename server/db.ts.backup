@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import sqlite3 from "sqlite3";
 import { seedDatabase } from "./seedData";
 
 const dataDir = path.resolve(process.cwd(), "data");
@@ -158,22 +159,13 @@ export async function initDatabase() {
     try {
       const mod = await import("sql.js");
       initSqlJs = mod.default ?? mod;
-      console.log("✅ Successfully imported sql.js module");
     } catch (e) {
-      console.error("❌ Failed to import sql.js:", e);
+      // Will be handled below by falling back to in-memory
       initSqlJs = null;
     }
 
     if (initSqlJs) {
-      console.log("🔄 Initializing sql.js with WASM...");
-      const SQL = await initSqlJs({
-        // Provide the path to the WASM file
-        locateFile: (file: string) => {
-          console.log("📁 Looking for sql.js file:", file);
-          return `node_modules/sql.js/dist/${file}`;
-        }
-      });
-      console.log("✅ SQL.js initialized successfully");
+      const SQL = await initSqlJs();
 
       // Load existing database file or create new one
       let dbData: Uint8Array | undefined;
@@ -312,21 +304,13 @@ export async function initDatabase() {
       // Assign the wrapper to db
       db = dbWrapper;
       
-      // Check if database needs seeding (only seed if empty)
-      db.get("SELECT COUNT(*) as count FROM domains", [], (err, row) => {
-        if (!err && (!row || row.count === 0)) {
-          console.log("📦 Database is empty, seeding with essential data...");
-          seedDatabase(db);
-        } else {
-          console.log(`📊 Database already contains ${row?.count || 0} domains - skipping seeding`);
-        }
-      });
+      // Seed the database with sample data
+      seedDatabase(db);
       
       return db;
     }
   } catch (err: any) {
-    console.error("❌ sql.js initialization failed:", err);
-    console.warn("⚠️  Falling back to in-memory database (data will not persist)");
+    console.warn("sql.js not available or failed to initialize — falling back to in-memory DB.");
     // fall through to in-memory fallback below
   }
 

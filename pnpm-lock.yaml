@@ -20,9 +20,6 @@ importers:
       sql.js:
         specifier: ^1.13.0
         version: 1.13.0
-      sqlite3:
-        specifier: ^5.1.7
-        version: 5.1.7
       zod:
         specifier: ^3.25.76
         version: 3.25.76

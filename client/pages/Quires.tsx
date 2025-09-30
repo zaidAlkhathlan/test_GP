@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import Header from '../components/Header';
 
 interface Inquiry {
   id: string;
@@ -28,8 +29,9 @@ export default function Quires() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10" dir="rtl">
-      <div className="max-w-[1100px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      <Header userType="buyer" />
+      <div className="max-w-[1100px] mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">الاستفسارات {id ? `- #${id}` : ''}</h1>

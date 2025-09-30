@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Header from '../components/Header';
 
 interface SupplierSession {
   id: number;
@@ -29,10 +30,7 @@ export default function SupplierHomePage() {
     }
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentSupplier');
-    navigate('/');
-  };
+
 
   if (!supplier) {
     return (
@@ -47,25 +45,7 @@ export default function SupplierHomePage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-green-600">توريد - لوحة المورد</h1>
-            </div>
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <span className="text-gray-700">مرحباً، {supplier.account_name}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                تسجيل الخروج
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userType="supplier" />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

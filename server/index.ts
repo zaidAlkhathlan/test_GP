@@ -7,6 +7,7 @@ import { createBuyer } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
+import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 
 export function createServer() {
   const app = express();
@@ -28,6 +29,12 @@ export function createServer() {
   app.post("/api/buyers", createBuyer);
   app.post("/api/auth/login", loginBuyer);
   app.post("/api/auth/supplier/login", loginSupplier);
+  
+  // Domain routes
+  app.get("/api/domains", getDomains);
+  app.get("/api/domains/:domainId/sub-domains", getSubDomainsByDomain);
+  app.get("/api/sub-domains", getAllSubDomains);
+  
   // Inquiries routes
   app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
   app.post('/api/tenders/:id/inquiries', createInquiry);
