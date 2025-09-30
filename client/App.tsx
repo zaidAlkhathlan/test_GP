@@ -13,6 +13,7 @@ import BuyerSignIn from "./pages/BuyerSignIn";
 import NotFound from "./pages/NotFound";
 import TenderDetails from "./pages/TenderDetails";
 import TenderOffers from "./pages/TenderOffers";
+import AwardedSupplier from "./pages/AwardedSupplier";
 import ActiveTenders from "./pages/ActiveTenders";
 import ExpiredTenders from "./pages/ExpiredTenders";
 import Quires from "./pages/Quires";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/tender/:id/quires" element={<Quires />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />
+          <Route path="/tender/:id/award/:offerId" element={<AwardedSupplier />} />
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

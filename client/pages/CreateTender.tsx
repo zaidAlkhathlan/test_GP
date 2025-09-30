@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Select from 'react-select';
 import Header from '../components/Header';
+import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from '@shared/api';
 
 export default function CreateTender() {
-  const [step, setStep] = useState(2); // show step 2 as in screenshot
+  const [step, setStep] = useState(1); // start at step 1
 
   // timing fields
   const [enquiryEndDate, setEnquiryEndDate] = useState('');
@@ -19,6 +20,64 @@ export default function CreateTender() {
   const [certificates, setCertificates] = useState<any[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
 
+  // Domain/Sub-domain state (like Register page)
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [allSubDomains, setAllSubDomains] = useState<SubDomain[]>([]);
+  const [filteredSubDomains, setFilteredSubDomains] = useState<{ value: string; label: string }[]>([]);
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
+  const [selectedSubDomains, setSelectedSubDomains] = useState<{ value: string; label: string }[]>([]);
+  const [loadingDomains, setLoadingDomains] = useState(false);
+
+  // Fetch domains (once)
+  useEffect(() => {
+    const fetchDomains = async () => {
+      try {
+        setLoadingDomains(true);
+        const res = await fetch('/api/domains');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: DomainsResponse = await res.json();
+        setDomains(data.domains);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching domains', e);
+      } finally {
+        setLoadingDomains(false);
+      }
+    };
+    fetchDomains();
+  }, []);
+
+  // Fetch all sub-domains (once)
+  useEffect(() => {
+    const fetchAllSubDomains = async () => {
+      try {
+        const res = await fetch('/api/sub-domains');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: SubDomainsResponse = await res.json();
+        setAllSubDomains(data.subDomains);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching sub-domains', e);
+      }
+    };
+    fetchAllSubDomains();
+  }, []);
+
+  // Filter sub-domains when the main domain changes
+  useEffect(() => {
+    if (selectedDomain && allSubDomains.length > 0) {
+      const opts = allSubDomains
+        .filter((s) => s.domain_id.toString() === selectedDomain)
+        .map((s) => ({ value: s.ID.toString(), label: s.Name }));
+      setFilteredSubDomains(opts);
+      // clear previous selection if domain changes
+      setSelectedSubDomains([]);
+    } else {
+      setFilteredSubDomains([]);
+      setSelectedSubDomains([]);
+    }
+  }, [selectedDomain, allSubDomains]);
+
   const next = () => setStep((s) => Math.min(5, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
 
@@ -32,64 +91,29 @@ export default function CreateTender() {
           <p className="text-sm text-tawreed-text-gray mt-1">املأ البيانات المطلوبة لنشر مناقصتك والعثور على أفضل الموردين</p>
         </div>
 
-        {/* Full header bar (static) copied visually from BuyerHome */}
-        <header className="mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button className="bg-tawreed-green text-white px-3 py-1 rounded-md">مؤسسة: اسم المنشأة</button>
-              <div className="hidden md:flex items-center gap-6 text-sm text-tawreed-text-dark" dir="rtl">
-                <Link to="/tenders/active" className="hover:underline">المناقصات النشطة</Link>
-                <Link to="/tenders/expired" className="hover:underline">المناقصات المنتهية</Link>
-                <a className="hover:underline">من نحن</a>
-                <a className="hover:underline">اتصل بنا</a>
+        {/* Centered RTL stepper (match Register) */}
+        <div className="flex items-center justify-center mb-16">
+          <div className="flex items-center gap-0">
+            {[1,2,3,4,5].map((s, index) => (
+              <div key={s} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    s <= step ? 'bg-tawreed-green text-white' : 'bg-gray-100 text-tawreed-text-gray'
+                  }`}
+                >
+                  {s}
+                </div>
+                {index < 4 && (
+                  <div
+                    className={`w-12 h-1 ${
+                      s < step ? 'bg-tawreed-green' : s === step ? 'bg-tawreed-green' : 'bg-gray-100'
+                    }`}
+                  />
+                )}
               </div>
-            </div>
-
-            <div className="flex-1 px-6">
-              <div className="max-w-xl mx-auto">
-                <input dir="rtl" placeholder="بحث..." className="w-full px-4 py-2 rounded-lg border border-tawreed-border-gray text-sm" />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-3">
-                <button className="relative">
-                  <span className="inline-block w-8 h-8 bg-gray-100 rounded-full"></span>
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span>
-                </button>
-                <button className="px-3 py-1 border rounded text-sm">حسابي</button>
-              </div>
-              <div className="text-tawreed-green font-bold">توريد</div>
-            </div>
+            ))}
           </div>
-        </header>
-
-        {/* Centered RTL stepper (use Register's exact layout for pixel alignment) */}
-          <div className="flex items-center justify-center mb-16">
-            <div className="flex items-center gap-0">
-              {/* Render visual left-to-right as 5..1 so the sequence reads right-to-left (1 at right) */}
-              {[5, 4, 3, 2, 1].map((s, index, arr) => {
-                const next = arr[index + 1];
-                const filled = s <= step; // circle filled when number <= current step
-                const connectorFilled = next !== undefined && next <= step; // connector is filled if the right-side (next) number is completed
-                return (
-                  <div key={s} className="flex items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        filled ? 'bg-tawreed-green text-white' : 'bg-gray-100 text-tawreed-text-gray'
-                      }`}
-                    >
-                      {s}
-                    </div>
-
-                    {index < arr.length - 1 && (
-                      <div className={`w-12 h-1 ${connectorFilled ? 'bg-tawreed-green' : 'bg-gray-100'}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        </div>
 
         {/* Main card with form */}
         <div className="bg-white rounded-xl shadow p-6">
@@ -130,15 +154,60 @@ export default function CreateTender() {
           {/* Step 1 (basic), Step 3 (description), Step 4 (additional), Step 5 (contact) keep previous structure but match spacing */}
           {step === 1 && (
             <div>
-              <h2 className="text-right text-lg font-semibold mb-4">البيانات الأساسية</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className="border rounded px-3 py-2 bg-white" placeholder="عنوان المناقصة" />
-                <select className="border rounded px-3 py-2 bg-white appearance-none">
-                  <option>اختر فئة المشروع</option>
-                  <option>مقاولات</option>
-                  <option>خدمات</option>
-                </select>
-                <input className="border rounded px-3 py-2 md:col-span-2 bg-white" placeholder="الموقع" />
+              <h2 className="text-right text-lg font-semibold mb-6">البيانات الأساسية</h2>
+
+              {/* عنوان المناقصة */}
+              <div className="mb-5">
+                <input className="w-full border rounded-lg px-3 py-2.5 bg-white" placeholder="عنوان المناقصة" />
+              </div>
+
+              {/* النشاط الرئيسي */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right">النشاط الرئيسي</label>
+                <div className="relative">
+                  <select
+                    value={selectedDomain}
+                    onChange={(e) => setSelectedDomain(e.target.value)}
+                    className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent appearance-none bg-white"
+                    dir="rtl"
+                    disabled={loadingDomains}
+                  >
+                    <option value="">
+                      {loadingDomains ? 'جاري التحميل...' : `اختر النشاط الرئيسي (${domains.length})`}
+                    </option>
+                    {domains.map((d) => (
+                      <option key={d.ID} value={d.ID.toString()}>{d.Name}</option>
+                    ))}
+                  </select>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-60">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 6L8 10L12 6" stroke="#22262A" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* النشاط الفرعي */}
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right">النشاط الفرعي</label>
+                <Select
+                  isMulti
+                  options={filteredSubDomains}
+                  value={selectedSubDomains}
+                  onChange={(v: any) => setSelectedSubDomains(v ? [...v] : [])}
+                  placeholder={selectedDomain ? 'اختر الأنشطة الفرعية...' : 'اختر النشاط الرئيسي أولاً'}
+                  isDisabled={!selectedDomain}
+                  classNamePrefix="react-select"
+                  styles={{
+                    control: (base) => ({ ...base, direction: 'rtl', backgroundColor: '#fff', borderColor: '#E5E7EB', opacity: !selectedDomain ? 0.6 : 1 }),
+                    menu: (base) => ({ ...base, direction: 'rtl' })
+                  }}
+                />
+              </div>
+
+              {/* الموقع */}
+              <div className="mb-2">
+                <input className="w-full border rounded-lg px-3 py-2.5 bg-white" placeholder="الموقع" />
               </div>
             </div>
           )}
@@ -148,15 +217,8 @@ export default function CreateTender() {
               <h2 className="text-right text-lg font-semibold mb-4">الوصف والمتطلبات</h2>
               <textarea className="w-full border rounded p-3 h-48 bg-white" placeholder="وصف المشروع والمتطلبات" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <label className="border-dashed border-2 border-gray-200 rounded p-6 text-center cursor-pointer flex items-center justify-center">
-                  <input type="file" accept="*/*" multiple className="hidden" onChange={(e)=>{/* handle files in e.target.files */}} />
-                  <span className="text-sm">اضغط لرفع ملف</span>
-                </label>
-
-                <label className="border-dashed border-2 border-gray-200 rounded p-6 text-center cursor-pointer flex items-center justify-center">
-                  <input type="file" accept="*/*" multiple className="hidden" onChange={(e)=>{/* handle files in e.target.files */}} />
-                  <span className="text-sm">اضغط لرفع ملف</span>
-                </label>
+                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center">اضغط لرفع ملف</div>
+                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center">اضغط لرفع ملف</div>
               </div>
             </div>
           )}
@@ -203,6 +265,11 @@ export default function CreateTender() {
 
           {/* Footer buttons matching screenshot: Previous on right, Save Draft + Next on left */}
           <div className="mt-6 flex items-center justify-between">
+            {/* Place Previous on the left side */}
+            <div>
+              <button onClick={prev} className="px-4 py-2 bg-white border rounded">السابق</button>
+            </div>
+            {/* Save Draft + Next on the right side */}
             <div className="flex items-center gap-3">
               <button onClick={() => {/* save draft stub */}} className="px-4 py-2 border rounded bg-white">حفظ كمسودة</button>
               {step < 5 ? (
@@ -210,10 +277,6 @@ export default function CreateTender() {
               ) : (
                 <button className="px-4 py-2 bg-tawreed-green text-white rounded">نشر المناقصة</button>
               )}
-            </div>
-
-            <div>
-              <button onClick={prev} className="px-4 py-2 bg-white border rounded">السابق</button>
             </div>
           </div>
         </div>
