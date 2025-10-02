@@ -28,6 +28,35 @@ export default function CreateTender() {
   const [selectedSubDomains, setSelectedSubDomains] = useState<{ value: string; label: string }[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(false);
 
+  // Form data state
+  const [formData, setFormData] = useState({
+    title: '',
+    location: '',
+    projectDescription: '',
+    previousWork: '',
+    coordinatorName: '',
+    coordinatorEmail: '',
+    coordinatorPhone: ''
+  });
+  
+  // File upload state
+  const [file1, setFile1] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
+  
+  const [currentBuyer, setCurrentBuyer] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Check buyer authentication
+  useEffect(() => {
+    const buyerData = localStorage.getItem('currentBuyer');
+    if (buyerData) {
+      setCurrentBuyer(JSON.parse(buyerData));
+    } else {
+      // Redirect to sign-in if not authenticated
+      window.location.href = '/buyer/signin';
+    }
+  }, []);
+
   // Fetch domains (once)
   useEffect(() => {
     const fetchDomains = async () => {
@@ -80,6 +109,130 @@ export default function CreateTender() {
 
   const next = () => setStep((s) => Math.min(5, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
+
+  // Handle form data changes
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle file uploads
+  const handleFileUpload = (fileNumber: 1 | 2, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت');
+        return;
+      }
+      
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('نوع الملف غير مدعوم. يرجى رفع ملفات PDF أو Word أو صور فقط');
+        return;
+      }
+      
+      if (fileNumber === 1) {
+        setFile1(file);
+      } else {
+        setFile2(file);
+      }
+    }
+  };
+
+  // Remove uploaded file
+  const removeFile = (fileNumber: 1 | 2) => {
+    if (fileNumber === 1) {
+      setFile1(null);
+    } else {
+      setFile2(null);
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
+    if (!currentBuyer) {
+      alert('يجب تسجيل الدخول أولاً');
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.title.trim()) {
+      alert('يجب إدخال عنوان المناقصة');
+      return;
+    }
+
+    if (!selectedDomain || selectedSubDomains.length === 0) {
+      alert('يجب اختيار النشاط الرئيسي والفرعي');
+      return;
+    }
+
+    if (!formData.projectDescription.trim()) {
+      alert('يجب إدخال وصف المشروع');
+      return;
+    }
+
+    if (!bidOpenDate || !bidOpenTime) {
+      alert('يجب تحديد تاريخ ووقت فتح العروض');
+      return;
+    }
+
+    if (!enquiryEndDate || !enquiryEndTime) {
+      alert('يجب تحديد تاريخ ووقت انتهاء الاستفسارات');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      // Create FormData to handle files
+      const formDataToSend = new FormData();
+      
+      // Add text fields
+      formDataToSend.append('buyer_id', currentBuyer.id.toString());
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('domain_id', selectedDomain);
+      formDataToSend.append('sub_domain_ids', JSON.stringify(selectedSubDomains.map(sd => parseInt(sd.value))));
+      formDataToSend.append('project_description', formData.projectDescription);
+      formDataToSend.append('city', formData.location);
+      formDataToSend.append('submit_deadline', `${bidOpenDate} ${bidOpenTime}`);
+      formDataToSend.append('quires_deadline', `${enquiryEndDate} ${enquiryEndTime}`);
+      formDataToSend.append('contract_time', `${durationDays} يوم`);
+      formDataToSend.append('previous_work', formData.previousWork);
+      formDataToSend.append('tender_coordinator', formData.coordinatorName);
+      formDataToSend.append('coordinator_email', formData.coordinatorEmail);
+      formDataToSend.append('coordinator_phone', formData.coordinatorPhone);
+      
+      // Add files if they exist
+      if (file1) {
+        formDataToSend.append('file1', file1);
+      }
+      if (file2) {
+        formDataToSend.append('file2', file2);
+      }
+
+      const response = await fetch('/api/tenders', {
+        method: 'POST',
+        // Don't set Content-Type header - let browser set it for FormData
+        body: formDataToSend
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      alert('تم إنشاء المناقصة بنجاح!');
+      // Redirect to buyer home or tender details
+      window.location.href = '/buyer/home';
+      
+    } catch (error) {
+      console.error('Error creating tender:', error);
+      alert('حدث خطأ أثناء إنشاء المناقصة. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100" dir="rtl">
@@ -158,7 +311,12 @@ export default function CreateTender() {
 
               {/* عنوان المناقصة */}
               <div className="mb-5">
-                <input className="w-full border rounded-lg px-3 py-2.5 bg-white" placeholder="عنوان المناقصة" />
+                <input 
+                  className="w-full border rounded-lg px-3 py-2.5 bg-white" 
+                  placeholder="عنوان المناقصة" 
+                  value={formData.title}
+                  onChange={(e) => updateFormData('title', e.target.value)}
+                />
               </div>
 
               {/* النشاط الرئيسي */}
@@ -207,7 +365,12 @@ export default function CreateTender() {
 
               {/* الموقع */}
               <div className="mb-2">
-                <input className="w-full border rounded-lg px-3 py-2.5 bg-white" placeholder="الموقع" />
+                <input 
+                  className="w-full border rounded-lg px-3 py-2.5 bg-white" 
+                  placeholder="الموقع" 
+                  value={formData.location}
+                  onChange={(e) => updateFormData('location', e.target.value)}
+                />
               </div>
             </div>
           )}
@@ -215,10 +378,83 @@ export default function CreateTender() {
           {step === 3 && (
             <div>
               <h2 className="text-right text-lg font-semibold mb-4">الوصف والمتطلبات</h2>
-              <textarea className="w-full border rounded p-3 h-48 bg-white" placeholder="وصف المشروع والمتطلبات" />
+              <textarea 
+                className="w-full border rounded p-3 h-48 bg-white" 
+                placeholder="وصف المشروع والمتطلبات"
+                value={formData.projectDescription}
+                onChange={(e) => updateFormData('projectDescription', e.target.value)}
+              />
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center">اضغط لرفع ملف</div>
-                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center">اضغط لرفع ملف</div>
+                {/* File Upload Slot 1 */}
+                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center hover:border-tawreed-green transition-colors">
+                  {file1 ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-tawreed-green">📄 {file1.name}</div>
+                      <div className="text-xs text-gray-500">{(file1.size / 1024 / 1024).toFixed(2)} MB</div>
+                      <button 
+                        type="button"
+                        onClick={() => removeFile(1)}
+                        className="text-red-500 text-xs hover:underline"
+                      >
+                        إزالة الملف
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-gray-500 mb-2">📎 ملف المواصفات التقنية</div>
+                      <input
+                        type="file"
+                        id="file1"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileUpload(1, e)}
+                      />
+                      <label 
+                        htmlFor="file1" 
+                        className="cursor-pointer text-tawreed-green hover:underline"
+                      >
+                        اضغط لرفع ملف
+                      </label>
+                      <div className="text-xs text-gray-400 mt-1">PDF, Word, أو صورة (حد أقصى 10MB)</div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* File Upload Slot 2 */}
+                <div className="border-dashed border-2 border-gray-200 rounded p-6 text-center hover:border-tawreed-green transition-colors">
+                  {file2 ? (
+                    <div className="space-y-2">
+                      <div className="text-sm text-tawreed-green">📄 {file2.name}</div>
+                      <div className="text-xs text-gray-500">{(file2.size / 1024 / 1024).toFixed(2)} MB</div>
+                      <button 
+                        type="button"
+                        onClick={() => removeFile(2)}
+                        className="text-red-500 text-xs hover:underline"
+                      >
+                        إزالة الملف
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-gray-500 mb-2">📋 ملف إضافي</div>
+                      <input
+                        type="file"
+                        id="file2"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={(e) => handleFileUpload(2, e)}
+                      />
+                      <label 
+                        htmlFor="file2" 
+                        className="cursor-pointer text-tawreed-green hover:underline"
+                      >
+                        اضغط لرفع ملف
+                      </label>
+                      <div className="text-xs text-gray-400 mt-1">PDF, Word, أو صورة (حد أقصى 10MB)</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -247,7 +483,12 @@ export default function CreateTender() {
                   styles={{ control: (base) => ({ ...base, direction: 'rtl', backgroundColor: '#fff', borderColor: '#E5E7EB' }), menu: (base) => ({ ...base, direction: 'rtl' }) }}
                 />
 
-                <textarea className="w-full border rounded p-3 h-32 bg-white" placeholder="الأعمال السابقة المطلوبة" />
+                <textarea 
+                  className="w-full border rounded p-3 h-32 bg-white" 
+                  placeholder="الأعمال السابقة المطلوبة"
+                  value={formData.previousWork}
+                  onChange={(e) => updateFormData('previousWork', e.target.value)}
+                />
               </div>
             </div>
           )}
@@ -256,9 +497,31 @@ export default function CreateTender() {
             <div>
               <h2 className="text-right text-lg font-semibold mb-4">معلومات التواصل</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input className="border rounded px-3 py-2 bg-white" placeholder="اسم المنسق" />
-                <input className="border rounded px-3 py-2 bg-white" placeholder="البريد الإلكتروني" />
-                <input className="border rounded px-3 py-2 bg-white" placeholder="رقم الجوال" />
+                <input 
+                  className="border rounded px-3 py-2 bg-white" 
+                  placeholder="اسم المنسق" 
+                  value={formData.coordinatorName}
+                  onChange={(e) => updateFormData('coordinatorName', e.target.value)}
+                />
+                <input 
+                  className="border rounded px-3 py-2 bg-white" 
+                  placeholder="البريد الإلكتروني" 
+                  type="email"
+                  value={formData.coordinatorEmail}
+                  onChange={(e) => updateFormData('coordinatorEmail', e.target.value)}
+                />
+                <input 
+                  className="border rounded px-3 py-2 bg-white" 
+                  placeholder="رقم الجوال (966xxxxxxxxx)" 
+                  type="tel"
+                  pattern="[0-9]{12}"
+                  value={formData.coordinatorPhone}
+                  onChange={(e) => {
+                    // Only allow numbers
+                    const value = e.target.value.replace(/\D/g, '');
+                    updateFormData('coordinatorPhone', value);
+                  }}
+                />
               </div>
             </div>
           )}
@@ -275,7 +538,13 @@ export default function CreateTender() {
               {step < 5 ? (
                 <button onClick={next} className="px-4 py-2 bg-tawreed-green text-white rounded">التالي</button>
               ) : (
-                <button className="px-4 py-2 bg-tawreed-green text-white rounded">نشر المناقصة</button>
+                <button 
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="px-4 py-2 bg-tawreed-green text-white rounded disabled:opacity-50"
+                >
+                  {submitting ? 'جاري النشر...' : 'نشر المناقصة'}
+                </button>
               )}
             </div>
           </div>

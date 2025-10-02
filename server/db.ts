@@ -152,6 +152,79 @@ export async function initDatabase() {
     );
   `;
 
+  // Tender table and relationships
+  const createTenderTable = `
+    CREATE TABLE IF NOT EXISTS tender (
+      id                    INTEGER PRIMARY KEY,
+      buyer_id              INTEGER NOT NULL,
+      reference_number      INTEGER,
+      title                 TEXT NOT NULL,
+      domain_id             INTEGER NOT NULL,
+      project_description   TEXT,
+      city                  TEXT,
+      created_at            TEXT    DEFAULT (CURRENT_TIMESTAMP),
+      submit_deadline       TEXT,
+      quires_deadline       TEXT,
+      contract_time         TEXT,
+      previous_work         TEXT,
+      evaluation_criteria   TEXT,
+      used_technologies     TEXT,
+      tender_coordinator    TEXT,
+      coordinator_email     TEXT,
+      coordinator_phone     TEXT,
+      file1                 BLOB,
+      file2                 BLOB,
+      file1_name            TEXT,
+      file2_name            TEXT,
+      FOREIGN KEY (buyer_id) REFERENCES Buyer(ID) ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (domain_id) REFERENCES domains(ID) ON DELETE RESTRICT ON UPDATE CASCADE
+    );
+  `;
+
+  const createTenderIndex = `
+    CREATE INDEX IF NOT EXISTS idx_tender_domain ON tender(domain_id);
+    CREATE INDEX IF NOT EXISTS idx_tender_buyer ON tender(buyer_id);
+  `;
+
+  // M:N: Tender ↔ Sub-domain
+  const createTenderSubDomainsTable = `
+    CREATE TABLE IF NOT EXISTS tender_sub_domains (
+      tender_id     INTEGER NOT NULL,
+      sub_domain_id INTEGER NOT NULL,
+      PRIMARY KEY (tender_id, sub_domain_id),
+      FOREIGN KEY (tender_id)     REFERENCES tender(id)      ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (sub_domain_id) REFERENCES sub_domains(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `;
+
+  const createTenderSubDomainsIndex = `CREATE INDEX IF NOT EXISTS idx_ts_subdomain ON tender_sub_domains(sub_domain_id);`;
+
+  // M:N: Tender ↔ License
+  const createTenderLicensesTable = `
+    CREATE TABLE IF NOT EXISTS tender_licenses (
+      tender_id   INTEGER NOT NULL,
+      license_id  INTEGER NOT NULL,
+      PRIMARY KEY (tender_id, license_id),
+      FOREIGN KEY (tender_id)  REFERENCES tender(id)   ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (license_id) REFERENCES Licenses(ID) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `;
+
+  const createTenderLicensesIndex = `CREATE INDEX IF NOT EXISTS idx_tl_license ON tender_licenses(license_id);`;
+
+  // M:N: Tender ↔ Certificate
+  const createTenderCertificatesTable = `
+    CREATE TABLE IF NOT EXISTS tender_certificates (
+      tender_id      INTEGER NOT NULL,
+      certificate_id INTEGER NOT NULL,
+      PRIMARY KEY (tender_id, certificate_id),
+      FOREIGN KEY (tender_id)       REFERENCES tender(id)        ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (certificate_id)  REFERENCES Certificates(ID)  ON DELETE CASCADE ON UPDATE CASCADE
+    );
+  `;
+
+  const createTenderCertificatesIndex = `CREATE INDEX IF NOT EXISTS idx_tc_certificate ON tender_certificates(certificate_id);`;
+
   try {
     // Dynamically import sql.js to avoid bundler resolving it at config time
     let initSqlJs: any;
@@ -213,6 +286,16 @@ export async function initDatabase() {
     // Create existing inquiry tables
     realDb.run(createInquiriesTable);
     realDb.run(createAnswersTable);
+    
+    // Create tender tables
+    realDb.run(createTenderTable);
+    realDb.run(createTenderIndex);
+    realDb.run(createTenderSubDomainsTable);
+    realDb.run(createTenderSubDomainsIndex);
+    realDb.run(createTenderLicensesTable);
+    realDb.run(createTenderLicensesIndex);
+    realDb.run(createTenderCertificatesTable);
+    realDb.run(createTenderCertificatesIndex);
     
     // Save database to file
     const data = realDb.export();
@@ -317,8 +400,15 @@ export async function initDatabase() {
         if (!err && (!row || row.count === 0)) {
           console.log("📦 Database is empty, seeding with essential data...");
           seedDatabase(db);
+          
+          // Tender data is seeded separately using seed-tenders.mjs
         } else {
-          console.log(`📊 Database already contains ${row?.count || 0} domains - skipping seeding`);
+          console.log(`📊 Database already contains ${row?.count || 0} domains - checking tenders...`);
+          
+          // Tender data is seeded separately using seed-tenders.mjs
+          db.get("SELECT COUNT(*) as count FROM tender", [], (err, tenderRow) => {
+            console.log(`📊 Database contains ${tenderRow?.count || 0} tenders`);
+          });
         }
       });
       

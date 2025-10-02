@@ -116,3 +116,51 @@ export interface Inquiry {
   answer_at?: string | null;
   buyer_name?: string | null;
 }
+
+// Database entity for tender (matches DB schema)
+export interface TenderEntity {
+  id?: number;
+  buyer_id: number;
+  reference_number?: number;
+  title: string;
+  domain_id: number;
+  project_description?: string;
+  city?: string;
+  created_at?: string;
+  submit_deadline?: string;
+  quires_deadline?: string;
+  contract_time?: string;
+  previous_work?: string;
+  evaluation_criteria?: string;
+  used_technologies?: string;
+  tender_coordinator?: string;
+  coordinator_email?: string;
+  coordinator_phone?: string;
+  file1?: Blob | null;
+  file2?: Blob | null;
+  // Related data
+  domain_name?: string;
+  buyer_name?: string;
+  buyer_company?: string;
+  sub_domains?: SubDomain[];
+}
+
+// Frontend display interface (existing - for TenderCard component)
+export interface Tender {
+  id: string;
+  title: string;
+  company: string;
+  category?: string;
+  location?: string;
+  budget?: string;
+  publishDate: string;
+  offerDeadline: string;
+  inquiryDeadline: string;
+  remainingDays: number;
+  remainingInquiryDays: number;
+  status: 'active' | 'expired' | 'awarded' | 'draft';
+  description?: string;
+  referenceNumber?: string;
+  // Sub-domains this tender covers
+  subDomains?: string[];
+}
