@@ -23,7 +23,7 @@ export default function TenderCard({
   const inquiryProgress = Math.min(100, (tender.remainingInquiryDays / 30) * 100);
 
   return (
-    <div className={clsx("w-full rounded-2xl border border-[#E0E0E0] bg-white shadow-sm p-6", className)} dir="rtl">
+    <div className={clsx("w-full h-full rounded-2xl border border-[#E0E0E0] bg-white shadow-sm p-6 flex flex-col", className)} dir="rtl">
       {/* Title & Company */}
       <div className="mb-4 text-right">
         <h3 className="text-[22px] font-bold text-[#16A249] mb-2">{tender.title}</h3>
@@ -105,6 +105,9 @@ export default function TenderCard({
           <span className="text-xl font-bold text-[#212121]">{tender.budget}</span>
         </div>
       )}
+
+      {/* Spacer to push footer down */}
+      <div className="flex-grow"></div>
 
       {/* Footer */}
       <div className="flex justify-between items-center text-xs text-[#707070]">
