@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import Header from '../components/Header';
 
 export default function TenderOffers() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [modalSupplier, setModalSupplier] = useState<any | null>(null);
 
   // sample offers data
@@ -74,8 +76,9 @@ export default function TenderOffers() {
   const closeSupplierModal = () => setModalSupplier(null);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-[900px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-50">
+      <Header userType="buyer" />
+      <div className="max-w-[900px] mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-6" dir="rtl">
           <div className="text-right">
             <h2 className="text-xl font-semibold">تقييم العروض المقدمة</h2>
@@ -131,7 +134,12 @@ export default function TenderOffers() {
                 </div>
 
                 <div className="flex-1">
-                  <button className="w-full bg-tawreed-green text-white py-3 rounded shadow">اعتماد المورد الفائز</button>
+                  <button
+                    className="w-full bg-tawreed-green text-white py-3 rounded shadow"
+                    onClick={() => navigate(`/tender/${id}/award/${o.id}`, { state: { supplier: o.supplier } })}
+                  >
+                    اعتماد المورد الفائز
+                  </button>
                 </div>
               </div>
             </div>

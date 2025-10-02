@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import Header from '../components/Header';
 
 export default function TenderDetails() {
   const { id } = useParams();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-[900px] mx-auto px-6">
+    <div className="min-h-screen bg-gray-50">
+      <Header userType="buyer" />
+      <div className="max-w-[900px] mx-auto px-6 py-10">
         <div className="bg-white rounded-lg shadow p-6" dir="rtl">
           <div className="flex items-center justify-between mb-4">
             <div className="text-right">
@@ -91,10 +93,10 @@ export default function TenderDetails() {
               </div>
             </div>
             <div className="bg-white rounded p-4 text-right shadow flex items-center gap-3">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">👥</div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">❓</div>
               <div>
-                <p className="text-xs text-gray-500">عدد الزيارات</p>
-                <p className="text-xl font-bold">12</p>
+                <p className="text-xs text-gray-500">عدد الاستفسارات</p>
+                <Link to={id ? `/tender/${id}/quires` : '#'} className="text-xl font-bold text-tawreed-green">عرض الاستفسارات</Link>
               </div>
             </div>
           </div>

@@ -9,10 +9,17 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Register from "./pages/Register";
 import BuyerHome from "./pages/BuyerHome";
+import BuyerSignIn from "./pages/BuyerSignIn";
 import NotFound from "./pages/NotFound";
 import TenderDetails from "./pages/TenderDetails";
 import TenderOffers from "./pages/TenderOffers";
+import AwardedSupplier from "./pages/AwardedSupplier";
 import ActiveTenders from "./pages/ActiveTenders";
+import ExpiredTenders from "./pages/ExpiredTenders";
+import Quires from "./pages/Quires";
+import CreateTender from "./pages/CreateTender";
+import SupplierSignIn from "./pages/SupplierSignIn";
+import SupplierHome from "./pages/SupplierHome";
 
 const queryClient = new QueryClient();
 
@@ -26,9 +33,17 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/register" element={<Register />} />
           <Route path="/buyer" element={<BuyerHome />} />
+          <Route path="/buyer/home" element={<BuyerHome />} />
+          <Route path="/buyer/signin" element={<BuyerSignIn />} />
           <Route path="/tenders/active" element={<ActiveTenders />} />
+          <Route path="/tenders/expired" element={<ExpiredTenders />} />
+          <Route path="/tenders/new" element={<CreateTender />} />
+          <Route path="/tender/:id/quires" element={<Quires />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />
+          <Route path="/tender/:id/award/:offerId" element={<AwardedSupplier />} />
+          <Route path="/supplier/signin" element={<SupplierSignIn />} />
+          <Route path="/supplier/home" element={<SupplierHome />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

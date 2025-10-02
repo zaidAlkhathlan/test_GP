@@ -1,7 +1,41 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import multer from "multer";
 import { handleDemo } from "./routes/demo";
+import { initDatabase } from "./db";
+import { createBuyer } from "./routes/buyers";
+import { loginBuyer } from "./routes/buyer-auth";
+import { loginSupplier } from "./routes/supplier-auth";
+import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
+import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
+import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain } from './routes/tenders';
+
+// Configure multer for file uploads (store in memory)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow PDF, Word, and common image formats
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, Word documents, and images are allowed.'));
+    }
+  }
+});
 
 export function createServer() {
   const app = express();
@@ -18,6 +52,37 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  
+  // Mount routes first, initialize DB in background
+  app.post("/api/buyers", createBuyer);
+  app.post("/api/auth/login", loginBuyer);
+  app.post("/api/auth/supplier/login", loginSupplier);
+  
+  // Domain routes
+  app.get("/api/domains", getDomains);
+  app.get("/api/domains/:domainId/sub-domains", getSubDomainsByDomain);
+  app.get("/api/sub-domains", getAllSubDomains);
+  
+  // Tender routes
+  app.get('/api/tenders', getTenders);
+  app.get('/api/tenders/:id', getTenderById);
+  app.post('/api/tenders', upload.fields([
+    { name: 'file1', maxCount: 1 },
+    { name: 'file2', maxCount: 1 }
+  ]), createTender);
+  app.put('/api/tenders/:id', updateTender);
+  app.delete('/api/tenders/:id', deleteTender);
+  app.get('/api/domains/:domainId/tenders', getTendersByDomain);
+  
+  // Inquiries routes
+  app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
+  app.post('/api/tenders/:id/inquiries', createInquiry);
+  app.post('/api/inquiries/:id/answer', answerInquiry);
+  
+  // Initialize DB in background
+  initDatabase().catch((error) => {
+    console.error("Failed to initialize database:", error);
+  });
 
   return app;
 }
