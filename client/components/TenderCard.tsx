@@ -23,74 +23,78 @@ export default function TenderCard({
   const inquiryProgress = Math.min(100, (tender.remainingInquiryDays / 30) * 100);
 
   return (
-    <div className={clsx("w-full rounded-2xl border border-[#E0E0E0] bg-white shadow-sm p-6", className)} dir="rtl">
+    <div className={clsx("w-full rounded-xl border border-gray-200 bg-white shadow-sm p-8 min-h-[420px]", className)} dir="rtl">
       {/* Title & Company */}
+      <div className="mb-6 text-right">
+        <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{tender.title}</h3>
+        <p className="text-base text-gray-600">{tender.company}</p>
+      </div>
+
+      {/* Category tags */}
       <div className="mb-4 text-right">
-        <h3 className="text-[22px] font-bold text-[#16A249] mb-2">{tender.title}</h3>
-        <p className="text-base text-[#555]">{tender.company}</p>
+        <div className="inline-flex gap-2 flex-wrap">
+          {tender.category && (
+            <span className="px-3 py-1 rounded bg-[#28A745] text-white text-xs font-medium">مقاولات</span>
+          )}
+          {tender.subDomains && tender.subDomains.slice(0, 2).map((subDomain, index) => (
+            <span key={index} className="px-3 py-1 rounded bg-gray-600 text-white text-xs">
+              {subDomain.length > 15 ? subDomain.substring(0, 15) + '...' : subDomain}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* Category and Sub-domain tags */}
-      <div className="flex gap-2 mb-6 flex-wrap justify-end">
-        {tender.category && (
-          <span className="px-5 py-1.5 rounded-lg bg-[#28A745] text-white text-sm">{tender.category}</span>
-        )}
-        {tender.subDomains && tender.subDomains.map((subDomain, index) => (
-          <span key={index} className="px-3 py-1.5 rounded-lg bg-[#5C650E] text-white text-xs">
-            {subDomain}
-          </span>
-        ))}
-      </div>
-
-      {/* Info box */}
-      <div className="rounded-xl bg-[#F7FDF8] p-6 mb-6">
-        {/* Row 1 */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4 mb-4" dir="ltr">
-          <ProgressRing percentage={submissionProgress} days={tender.remainingDays} />
-
-          <div className="flex items-center gap-2 text-xs text-[#333] flex-wrap justify-end" dir="rtl">
-            <span className="text-sm">م</span>
-            <span className="tabular-nums">{tender.offerDeadline}</span>
-            <span className="whitespace-nowrap">موعد انتهاء تقديم العروض</span>
-            <Calendar className="w-4 h-4 text-[#28A745]" />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-[#333]" dir="rtl">
-            <Hash className="w-4 h-4 text-[#28A745]" />
-            {tender.location && (
-              <span className="truncate max-w-[28ch]">{tender.location}</span>
-            )}
+      {/* Location */}
+      {tender.location && (
+        <div className="mb-4 text-right">
+          <div className="flex items-center gap-2 text-gray-600">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm">{tender.location}</span>
           </div>
         </div>
+      )}
 
-        {/* Row 2 */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-4" dir="ltr">
-          <ProgressRing percentage={inquiryProgress} days={tender.remainingInquiryDays} />
-
-          <div className="flex items-center gap-2 text-xs text-[#333] flex-wrap justify-end" dir="rtl">
-            <span className="text-sm">م</span>
-            <span className="tabular-nums">{tender.inquiryDeadline}</span>
-            <span className="whitespace-nowrap">موعد انتهاء الاستفسارات</span>
-            <Calendar className="w-4 h-4 text-[#28A745]" />
+      {/* Progress and Date Info */}
+      <div className="mb-6">
+        {/* Progress circles and dates */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-[#28A745]" />
+            <div className="text-right">
+              <span className="text-sm text-gray-600 block">موعد انتهاء تقديم العروض</span>
+              <span className="text-sm font-medium">{tender.offerDeadline}</span>
+            </div>
           </div>
-
-          <div /> {/* empty to align grid */}
+          <ProgressRing percentage={submissionProgress} days={tender.remainingDays} />
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Calendar className="w-5 h-5 text-[#28A745]" />
+            <div className="text-right">
+              <span className="text-sm text-gray-600 block">موعد انتهاء الاستفسارات</span>
+              <span className="text-sm font-medium">{tender.inquiryDeadline}</span>
+            </div>
+          </div>
+          <ProgressRing percentage={inquiryProgress} days={tender.remainingInquiryDays} />
         </div>
       </div>
 
       {/* Actions */}
       {showActions && (
-        <div className="flex gap-3 mb-6 justify-end">
+        <div className="flex gap-2 mb-4 justify-end">
           <Link to={`/tender/${tender.id}`}>
             <Button
               variant="outline"
-              className="h-10 px-6 rounded-lg border border-[#28A745] text-[#28A745] bg-white hover:bg-[#28A745]/5"
+              className="h-8 px-4 rounded text-sm border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
             >
               التفاصيل
             </Button>
           </Link>
           <Button
-            className="h-10 px-6 rounded-lg bg-[#28A745] text-white hover:bg-[#28A745]/90"
+            className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
             onClick={() => (userType === "buyer" && onViewOffers ? onViewOffers(tender.id) : null)}
           >
             العروض المقدمة
@@ -99,46 +103,53 @@ export default function TenderCard({
       )}
 
       {/* Budget */}
-      {tender.budget && (
-        <div className="mb-6 text-right">
-          <span className="text-sm text-[#555] ml-2">الميزانية المتوقعة:</span>
-          <span className="text-xl font-bold text-[#212121]">{tender.budget}</span>
-        </div>
-      )}
+      <div className="mb-6 text-right">
+        <span className="text-base text-gray-600 block mb-1">قيمة وثائق المناقصة:</span>
+        <div className="text-2xl font-bold text-gray-900">{tender.budget || '100,000 ريال'}</div>
+      </div>
 
       {/* Footer */}
-      <div className="flex justify-between items-center text-xs text-[#707070]">
+      <div className="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
         <span>تاريخ النشر: {tender.publishDate}</span>
-        <span>الرقم المرجعي #{tender.referenceNumber}</span>
+        <span>الرقم المرجعي {tender.referenceNumber}</span>
       </div>
     </div>
   );
 }
 
 function ProgressRing({ percentage, days }: { percentage: number; days: number }) {
-  const radius = 18;
+  const radius = 16;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
+  
+  // Color based on days remaining
+  const getColor = (days: number) => {
+    if (days <= 3) return "#EF4444"; // Red
+    if (days <= 7) return "#F59E0B"; // Orange
+    return "#10B981"; // Green
+  };
+
+  const color = getColor(days);
 
   return (
-    <div className="relative w-10 h-10 shrink-0">
-      <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r={radius} stroke="#E0E0E0" strokeWidth="4" fill="none" />
+    <div className="relative w-12 h-12 shrink-0">
+      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r={radius} stroke="#E5E7EB" strokeWidth="3" fill="none" />
         <circle
           cx="20"
           cy="20"
           r={radius}
-          stroke="#28A745"
-          strokeWidth="4"
+          stroke={color}
+          strokeWidth="3"
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center leading-tight">
-        <span className="text-xs font-bold text-[#333]">{days}</span>
-        <span className="text-[9px] font-bold text-[#333]">ايام</span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-sm font-bold" style={{ color }}>{days}</span>
+        <span className="text-[10px] font-medium text-gray-600">يوم</span>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import TenderCard from '../components/TenderCard';
+import TenderFilter from '../components/TenderFilter';
 import { fetchTenders } from '../utils/tenderUtils';
 import { Tender } from '@shared/api';
 
@@ -9,10 +10,60 @@ export default function ActiveTenders() {
   const navigate = useNavigate();
   const [currentBuyer, setCurrentBuyer] = useState<any>(null);
   const [tenders, setTenders] = useState<Tender[]>([]);
+  const [filteredTenders, setFilteredTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
 
   const handleViewOffers = (tenderId: string) => {
     navigate(`/tender/${tenderId}/offers`);
+  };
+
+  const handleFilterChange = (filters: any) => {
+    let filtered = [...tenders];
+
+    // Search text filter
+    if (filters.searchText) {
+      filtered = filtered.filter(tender => 
+        tender.title.toLowerCase().includes(filters.searchText.toLowerCase()) ||
+        tender.description?.toLowerCase().includes(filters.searchText.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (filters.status.active || filters.status.nearDeadline) {
+      filtered = filtered.filter(tender => {
+        if (filters.status.active && tender.status === 'active') return true;
+        if (filters.status.nearDeadline && tender.remainingDays <= 7) return true;
+        return false;
+      });
+    }
+
+    // Budget filter
+    if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 10000000) {
+      filtered = filtered.filter(tender => {
+        const budget = parseFloat(tender.budget?.replace(/[^\d]/g, '') || '0');
+        return budget >= filters.budgetRange[0] && budget <= filters.budgetRange[1];
+      });
+    }
+
+    // Location filter (region and city)
+    if (filters.region || filters.city) {
+      filtered = filtered.filter(tender => {
+        const location = tender.location?.toLowerCase() || '';
+        if (filters.city) {
+          return location.includes(filters.city.toLowerCase());
+        }
+        return true;
+      });
+    }
+
+    // Domain filters
+    if (filters.primaryDomain) {
+      filtered = filtered.filter(tender =>
+        tender.category?.toLowerCase().includes(filters.primaryDomain.toLowerCase())
+      );
+    }
+
+    setFilteredTenders(filtered);
   };
 
   // Check buyer authentication
@@ -37,6 +88,7 @@ export default function ActiveTenders() {
         // Filter to show only active (non-expired) tenders
         const activeTenders = fetchedTenders.filter(tender => tender.status === 'active');
         setTenders(activeTenders);
+        setFilteredTenders(activeTenders);
       } catch (error) {
         console.error('Error loading active tenders:', error);
       } finally {
@@ -60,9 +112,9 @@ export default function ActiveTenders() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header userType="buyer" />
-      <div className="max-w-[1200px] mx-auto px-6 py-10">
+      <div className="max-w-[1400px] mx-auto px-6 py-10">
 
-        <div className="flex items-start gap-6" dir="rtl">
+        <div className="flex items-start gap-8" dir="rtl">
           <main className="flex-1">
             <div className="text-right mb-6">
               <h1 className="text-2xl font-bold">مناقصاتي النشطة</h1>
@@ -81,12 +133,12 @@ export default function ActiveTenders() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {loading ? (
                 // Loading skeleton
                 Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="w-full max-w-lg">
-                    <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div key={index} className="w-full h-full">
+                    <div className="bg-white rounded-xl p-8 shadow-sm h-full min-h-[400px]">
                       <div className="animate-pulse">
                         <div className="h-6 bg-gray-200 rounded mb-4"></div>
                         <div className="h-4 bg-gray-200 rounded mb-2"></div>
@@ -96,28 +148,35 @@ export default function ActiveTenders() {
                     </div>
                   </div>
                 ))
-              ) : tenders.length > 0 ? (
+              ) : filteredTenders.length > 0 ? (
                 // Real tender data
-                tenders.map((tender) => (
-                  <div key={tender.id} className="w-full max-w-lg">
+                filteredTenders.map((tender) => (
+                  <div key={tender.id} className="w-full">
                     <TenderCard 
                       tender={tender}
                       userType="buyer"
                       onViewOffers={handleViewOffers}
+                      className="h-full"
                     />
                   </div>
                 ))
               ) : (
                 // No tenders found
-                <div className="w-full max-w-lg">
-                  <div className="bg-white rounded-xl p-8 shadow-sm text-center">
-                    <div className="text-gray-500 mb-4">لا توجد لديك مناقصات نشطة حالياً</div>
-                    <Link 
-                      to="/tenders/new" 
-                      className="inline-block bg-tawreed-green text-white px-6 py-2 rounded"
-                    >
-                      إنشاء مناقصة جديدة
-                    </Link>
+                <div className="col-span-full">
+                  <div className="bg-white rounded-xl p-8 shadow-sm text-center max-w-lg mx-auto">
+                    <div className="text-gray-500 mb-4">
+                      {tenders.length === 0 ? 'لا توجد لديك مناقصات نشطة حالياً' : 'لا توجد نتائج مطابقة للفلاتر المحددة'}
+                    </div>
+                    {tenders.length === 0 ? (
+                      <Link 
+                        to="/tenders/new" 
+                        className="inline-block bg-tawreed-green text-white px-6 py-2 rounded"
+                      >
+                        إنشاء مناقصة جديدة
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-gray-400">جرب تغيير الفلاتر للعثور على المزيد من النتائج</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -125,18 +184,7 @@ export default function ActiveTenders() {
           </main>
 
           <aside className="w-80">
-            <div className="bg-white rounded p-4 shadow">
-              <h4 className="text-right font-semibold">مناقصاتي</h4>
-              <input placeholder="ابحث عن مناقصة" className="w-full border rounded px-3 py-2 mt-3" />
-
-              <div className="mt-4">
-                <p className="text-sm text-gray-500">حالة المناقصة</p>
-                <div className="mt-2 space-y-2">
-                  <label className="flex items-center gap-2"><input type="checkbox" /> نشطة</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" /> قيد المراجعة</label>
-                </div>
-              </div>
-            </div>
+            <TenderFilter onFilterChange={handleFilterChange} />
           </aside>
         </div>
       </div>
