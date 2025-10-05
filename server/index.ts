@@ -10,6 +10,8 @@ import { loginSupplier } from "./routes/supplier-auth";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain } from './routes/tenders';
+import { getLicenses, getLicenseByCode } from './routes/licenses';
+import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 
 // Configure multer for file uploads (store in memory)
 const upload = multer({
@@ -78,6 +80,14 @@ export function createServer() {
   app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
   app.post('/api/tenders/:id/inquiries', createInquiry);
   app.post('/api/inquiries/:id/answer', answerInquiry);
+  
+  // License routes
+  app.get('/api/licenses', getLicenses);
+  app.get('/api/licenses/:code', getLicenseByCode);
+  
+  // Certificate routes
+  app.get('/api/certificates', getAllCertificates);
+  app.get('/api/certificates/:code', getCertificateByCode);
   
   // Initialize DB in background
   initDatabase().catch((error) => {

@@ -103,7 +103,7 @@ export default function BuyerHome() {
                 </svg>
               </div>
               <div className="flex-1">
-                <div className="text-sm text-gray-500">مناقصات تم ترسيطها</div>
+                <div className="text-sm text-gray-500">مناقصات تم ترسيتها</div>
                 <div className="text-2xl font-bold text-tawreed-green">405,926</div>
                 <div className="text-xs text-green-500">8.3% ↑</div>
               </div>

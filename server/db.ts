@@ -176,6 +176,7 @@ export async function initDatabase() {
       file2                 BLOB,
       file1_name            TEXT,
       file2_name            TEXT,
+      expected_budget       REAL,
       FOREIGN KEY (buyer_id) REFERENCES Buyer(ID) ON DELETE CASCADE ON UPDATE CASCADE,
       FOREIGN KEY (domain_id) REFERENCES domains(ID) ON DELETE RESTRICT ON UPDATE CASCADE
     );

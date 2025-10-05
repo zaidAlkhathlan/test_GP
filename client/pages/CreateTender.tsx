@@ -12,13 +12,14 @@ export default function CreateTender() {
   const [enquiryEndTime, setEnquiryEndTime] = useState('');
   const [bidOpenDate, setBidOpenDate] = useState('');
   const [bidOpenTime, setBidOpenTime] = useState('');
-  const [durationDays, setDurationDays] = useState('31');
+  const [durationDays, setDurationDays] = useState('');
 
-  // select options (used in other steps)
-  const certificateOptions = Array.from({ length: 20 }).map((_, i) => ({ value: `cert${i+1}`, label: `شهادة ${i+1}` }));
-  const licenseOptions = Array.from({ length: 20 }).map((_, i) => ({ value: `lic${i+1}`, label: `ترخيص ${i+1}` }));
-  const [certificates, setCertificates] = useState<any[]>([]);
-  const [licenses, setLicenses] = useState<any[]>([]);
+  // License and certificate options from database
+  const [licenseOptions, setLicenseOptions] = useState<{ value: string; label: string; isMandatory?: boolean }[]>([]);
+  const [certificateOptions, setCertificateOptions] = useState<{ value: string; label: string }[]>([]);
+  const [selectedLicenses, setSelectedLicenses] = useState<{ value: string; label: string; isMandatory?: boolean }[]>([]);
+  const [selectedCertificates, setSelectedCertificates] = useState<{ value: string; label: string }[]>([]);
+  const [loadingLicenses, setLoadingLicenses] = useState(false);
 
   // Domain/Sub-domain state (like Register page)
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -36,7 +37,8 @@ export default function CreateTender() {
     previousWork: '',
     coordinatorName: '',
     coordinatorEmail: '',
-    coordinatorPhone: ''
+    coordinatorPhone: '',
+    expectedBudget: ''
   });
   
   // File upload state
@@ -90,6 +92,53 @@ export default function CreateTender() {
       }
     };
     fetchAllSubDomains();
+  }, []);
+
+  // Fetch licenses from database
+  useEffect(() => {
+    const fetchLicenses = async () => {
+      try {
+        setLoadingLicenses(true);
+        const response = await fetch('/api/licenses');
+        if (response.ok) {
+          const licenses = await response.json();
+          const options = licenses.map((license: any) => ({
+            value: license.code,
+            label: `${license.name_ar} - ${license.name_en}`,
+            category: license.category
+          }));
+          setLicenseOptions(options);
+        }
+      } catch (error) {
+        console.error('Error fetching licenses:', error);
+      } finally {
+        setLoadingLicenses(false);
+      }
+    };
+
+    fetchLicenses();
+  }, []);
+
+  // Fetch certificates from database
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      try {
+        const response = await fetch('/api/certificates');
+        if (response.ok) {
+          const certificates = await response.json();
+          const options = certificates.map((cert: any) => ({
+            value: cert.code,
+            label: `${cert.name_ar} - ${cert.name_en}`,
+            category: cert.category
+          }));
+          setCertificateOptions(options);
+        }
+      } catch (error) {
+        console.error('Error fetching certificates:', error);
+      }
+    };
+
+    fetchCertificates();
   }, []);
 
   // Filter sub-domains when the main domain changes
@@ -167,6 +216,11 @@ export default function CreateTender() {
       return;
     }
 
+    if (!formData.expectedBudget.trim() || parseFloat(formData.expectedBudget) <= 0) {
+      alert('يجب إدخال الميزانية المتوقعة');
+      return;
+    }
+
     if (!formData.projectDescription.trim()) {
       alert('يجب إدخال وصف المشروع');
       return;
@@ -202,6 +256,11 @@ export default function CreateTender() {
       formDataToSend.append('tender_coordinator', formData.coordinatorName);
       formDataToSend.append('coordinator_email', formData.coordinatorEmail);
       formDataToSend.append('coordinator_phone', formData.coordinatorPhone);
+      formDataToSend.append('expected_budget', formData.expectedBudget);
+      
+      // Add required licenses and certificates
+      formDataToSend.append('required_licenses', JSON.stringify(selectedLicenses.map(l => l.value)));
+      formDataToSend.append('required_certificates', JSON.stringify(selectedCertificates.map(c => c.value)));
       
       // Add files if they exist
       if (file1) {
@@ -278,27 +337,59 @@ export default function CreateTender() {
               </div>
 
               <div className="bg-white border border-tawreed-border-gray rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="text-right">
-                    <label className="text-sm text-tawreed-text-dark">تاريخ انتهاء الاستفسارات *</label>
-                    <div className="mt-2 flex gap-3">
-                      <input type="date" value={enquiryEndDate} onChange={(e)=>setEnquiryEndDate(e.target.value)} className="px-3 py-2 border rounded-lg bg-white w-1/2" />
-                      <input type="time" value={enquiryEndTime} onChange={(e)=>setEnquiryEndTime(e.target.value)} className="px-3 py-2 border rounded-lg bg-white w-1/2" />
+                    <label className="text-sm text-tawreed-text-dark mb-2 block">تاريخ انتهاء الاستفسارات *</label>
+                    <div className="flex gap-3 flex-row-reverse">
+                      <input 
+                        type="time" 
+                        value={enquiryEndTime} 
+                        onChange={(e)=>setEnquiryEndTime(e.target.value)} 
+                        className="px-3 py-2 border rounded-lg bg-white flex-1 text-right" 
+                        placeholder="الوقت"
+                      />
+                      <input 
+                        type="date" 
+                        value={enquiryEndDate} 
+                        onChange={(e)=>setEnquiryEndDate(e.target.value)} 
+                        className="px-3 py-2 border rounded-lg bg-white flex-1 text-right" 
+                      />
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <label className="text-sm text-tawreed-text-dark">تاريخ فتح المظاريف *</label>
-                    <div className="mt-2 flex gap-3">
-                      <input type="date" value={bidOpenDate} onChange={(e)=>setBidOpenDate(e.target.value)} className="px-3 py-2 border rounded-lg bg-white w-1/2" />
-                      <input type="time" value={bidOpenTime} onChange={(e)=>setBidOpenTime(e.target.value)} className="px-3 py-2 border rounded-lg bg-white w-1/2" />
+                    <label className="text-sm text-tawreed-text-dark mb-2 block">تاريخ فتح المظاريف *</label>
+                    <div className="flex gap-3 flex-row-reverse">
+                      <input 
+                        type="time" 
+                        value={bidOpenTime} 
+                        onChange={(e)=>setBidOpenTime(e.target.value)} 
+                        className="px-3 py-2 border rounded-lg bg-white flex-1 text-right" 
+                        placeholder="الوقت"
+                      />
+                      <input 
+                        type="date" 
+                        value={bidOpenDate} 
+                        onChange={(e)=>setBidOpenDate(e.target.value)} 
+                        className="px-3 py-2 border rounded-lg bg-white flex-1 text-right" 
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="text-sm text-tawreed-text-dark">مدة العقد / تاريخ تسليم المشروع *</label>
-                  <input value={durationDays} onChange={(e)=>setDurationDays(e.target.value)} className="mt-2 w-full px-3 py-2 border rounded-lg bg-white" />
+                <div className="mt-6">
+                  <label className="text-sm text-tawreed-text-dark mb-2 block">مدة العقد / تاريخ تسليم المشروع *</label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="number" 
+                      value={durationDays} 
+                      onChange={(e)=>setDurationDays(e.target.value)} 
+                      className="px-3 py-2 border rounded-lg bg-white w-24 text-right" 
+                      placeholder="30"
+                      min="1"
+                    />
+                    <span className="text-sm text-tawreed-text-dark">يوم</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -364,13 +455,30 @@ export default function CreateTender() {
               </div>
 
               {/* الموقع */}
-              <div className="mb-2">
+              <div className="mb-5">
                 <input 
                   className="w-full border rounded-lg px-3 py-2.5 bg-white" 
                   placeholder="الموقع" 
                   value={formData.location}
                   onChange={(e) => updateFormData('location', e.target.value)}
                 />
+              </div>
+
+              {/* الميزانية المتوقعة */}
+              <div className="mb-2">
+                <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right">الميزانية المتوقعة *</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="number" 
+                    className="flex-1 border rounded-lg px-3 py-2.5 bg-white text-right" 
+                    placeholder="100,000" 
+                    value={formData.expectedBudget}
+                    onChange={(e) => updateFormData('expectedBudget', e.target.value)}
+                    min="0"
+                    step="1000"
+                  />
+                  <span className="text-sm text-tawreed-text-dark">ريال</span>
+                </div>
               </div>
             </div>
           )}
@@ -466,9 +574,10 @@ export default function CreateTender() {
                 <Select
                   isMulti
                   options={licenseOptions}
-                  value={licenses}
-                  onChange={(v: any) => setLicenses(v ? [...v] : [])}
-                  placeholder="اختر التراخيص..."
+                  value={selectedLicenses}
+                  onChange={(v: any) => setSelectedLicenses(v ? [...v] : [])}
+                  placeholder={loadingLicenses ? "جاري تحميل التراخيص..." : "اختر التراخيص المطلوبة..."}
+                  isDisabled={loadingLicenses}
                   classNamePrefix="react-select"
                   styles={{ control: (base) => ({ ...base, direction: 'rtl', backgroundColor: '#fff', borderColor: '#E5E7EB' }), menu: (base) => ({ ...base, direction: 'rtl' }) }}
                 />
@@ -476,9 +585,9 @@ export default function CreateTender() {
                 <Select
                   isMulti
                   options={certificateOptions}
-                  value={certificates}
-                  onChange={(v: any) => setCertificates(v ? [...v] : [])}
-                  placeholder="اختر الشهادات..."
+                  value={selectedCertificates}
+                  onChange={(v: any) => setSelectedCertificates(v ? [...v] : [])}
+                  placeholder="اختر الشهادات المطلوبة..."
                   classNamePrefix="react-select"
                   styles={{ control: (base) => ({ ...base, direction: 'rtl', backgroundColor: '#fff', borderColor: '#E5E7EB' }), menu: (base) => ({ ...base, direction: 'rtl' }) }}
                 />

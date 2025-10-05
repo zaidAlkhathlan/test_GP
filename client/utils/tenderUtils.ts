@@ -36,7 +36,7 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
     company: companyName || dbTender.tender_coordinator || 'شركة غير محددة',
     category: dbTender.domain_name || 'فئة غير محددة',
     location: dbTender.city,
-    budget: '100,000 ريال', // Mock budget - you can add this field to DB later
+    budget: dbTender.expected_budget ? `${parseFloat(dbTender.expected_budget).toLocaleString('ar-SA')} ريال` : 'غير محدد',
     publishDate: formatArabicDate(dbTender.created_at),
     offerDeadline: formatArabicDate(dbTender.submit_deadline),
     inquiryDeadline: formatArabicDate(dbTender.quires_deadline),

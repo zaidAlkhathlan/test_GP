@@ -34,11 +34,11 @@ export default function TenderCard({
       <div className="mb-4 text-right">
         <div className="inline-flex gap-2 flex-wrap">
           {tender.category && (
-            <span className="px-3 py-1 rounded bg-[#28A745] text-white text-xs font-medium">مقاولات</span>
+            <span className="px-3 py-1 rounded bg-[#28A745] text-white text-xs font-medium">{tender.category}</span>
           )}
-          {tender.subDomains && tender.subDomains.slice(0, 2).map((subDomain, index) => (
+          {tender.subDomains && tender.subDomains.map((subDomain, index) => (
             <span key={index} className="px-3 py-1 rounded bg-gray-600 text-white text-xs">
-              {subDomain.length > 15 ? subDomain.substring(0, 15) + '...' : subDomain}
+              {subDomain}
             </span>
           ))}
         </div>
@@ -104,7 +104,7 @@ export default function TenderCard({
 
       {/* Budget */}
       <div className="mb-6 text-right">
-        <span className="text-base text-gray-600 block mb-1">قيمة وثائق المناقصة:</span>
+        <span className="text-base text-gray-600 block mb-1">الميزانية المتوقعة:</span>
         <div className="text-2xl font-bold text-gray-900">{tender.budget || '100,000 ريال'}</div>
       </div>
 

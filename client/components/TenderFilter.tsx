@@ -98,6 +98,8 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
 
   const handleFilterChange = (key: string, value: any) => {
     const newFilters = { ...filters, [key]: value };
+    console.log('Filter changed:', key, '=', value); // Debug log
+    console.log('New filters:', newFilters); // Debug log
     setFilters(newFilters);
     onFilterChange?.(newFilters);
   };
@@ -329,16 +331,20 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
         <Button 
           variant="outline" 
           className="w-full text-gray-600 border-gray-300 hover:bg-gray-50"
-          onClick={() => setFilters({
-            searchText: '',
-            status: { active: false, nearDeadline: false },
-            budgetRange: [0, 10000000],
-            dateRange: { from: '', to: '' },
-            region: '',
-            city: '',
-            primaryDomain: '',
-            subDomain: '',
-          })}
+          onClick={() => {
+            const resetFilters = {
+              searchText: '',
+              status: { active: false, nearDeadline: false },
+              budgetRange: [0, 10000000] as [number, number],
+              dateRange: { from: '', to: '' },
+              region: '',
+              city: '',
+              primaryDomain: '',
+              subDomain: '',
+            };
+            setFilters(resetFilters);
+            onFilterChange?.(resetFilters);
+          }}
         >
           إعادة تعيين الفلاتر
         </Button>
