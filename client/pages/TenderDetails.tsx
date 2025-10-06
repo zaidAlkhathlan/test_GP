@@ -24,6 +24,8 @@ export default function TenderDetails() {
         const data = await response.json();
         console.log('Tender data:', data); // Debug log
         console.log('Sub-domains:', data.subDomains); // Debug log
+        console.log('Licenses:', data.licenses); // Debug log
+        console.log('Certificates:', data.certificates); // Debug log
         console.log('Tender domain name:', data.tender?.domain_name); // Debug log
         setTenderData(data);
       } catch (err) {
@@ -106,7 +108,7 @@ export default function TenderDetails() {
     );
   }
 
-  const { tender, licenses = [], subDomains = [] } = tenderData;
+  const { tender, licenses = [], certificates = [], subDomains = [] } = tenderData;
   const remainingOfferDays = getRemainingDays(tender.submit_deadline);
   const remainingInquiryDays = getRemainingDays(tender.quires_deadline);
 
@@ -189,7 +191,7 @@ export default function TenderDetails() {
                         ))}
                       </div>
                     </div>
-                  </div>st
+                  </div>
                 )}
               </div>
             </div>
@@ -398,41 +400,20 @@ export default function TenderDetails() {
               {licenses && licenses.length > 0 ? (
                 <div className="space-y-4">
                   {licenses.map((license: any, index: number) => (
-                    <div key={license.code || index} className="flex items-start gap-4">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        license.is_mandatory 
-                          ? 'bg-red-50' 
-                          : 'bg-blue-50'
-                      }`}>
-                        {license.is_mandatory ? (
-                          <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                          </svg>
-                        )}
+                    <div key={license.ID || index} className="flex items-start gap-4">
+                      <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812z" clipRule="evenodd" />
+                        </svg>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-gray-900 font-medium">{license.name_ar}</span>
-                          {license.is_mandatory ? (
-                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                              مطلوب
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              اختياري
-                            </span>
-                          )}
+                          <span className="text-gray-900 font-medium">{license.Name}</span>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            مطلوب
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-600">
-                          {license.code} - {license.category}
-                        </p>
-                        {license.description_ar && (
-                          <p className="text-xs text-gray-500 mt-1">{license.description_ar}</p>
-                        )}
+                      
                       </div>
                     </div>
                   ))}
@@ -443,6 +424,50 @@ export default function TenderDetails() {
                     <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812z" clipRule="evenodd" />
                   </svg>
                   <p>لا توجد تراخيص محددة مطلوبة لهذه المناقصة</p>
+                  <p className="text-xs mt-1">يُرجى الرجوع إلى الوثائق التفصيلية</p>
+                </div>
+              )}
+            </div>
+
+            {/* Required Certificates */}
+            <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                    <path d="M12,12L10,10V13H8V15H10V18L12,16L14,18V15H16V13H14V10L12,12Z" fill="#8B5CF6" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-lg">الشهادات المطلوبة</h4>
+              </div>
+              
+              {certificates && certificates.length > 0 ? (
+                <div className="space-y-4">
+                  {certificates.map((certificate: any, index: number) => (
+                    <div key={certificate.ID || index} className="flex items-start gap-4">
+                      <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M13,21L15.5,18.5L18,21V12H13V21M4,3H18A2,2 0 0,1 20,5V19A2,2 0 0,1 18,21H13V19H18V5H4V19H11V21H4A2,2 0 0,1 2,19V5A2,2 0 0,1 4,3M6,7H16V9H6V7M6,11H16V13H6V11M6,15H11V17H6V15Z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-gray-900 font-medium">{certificate.Name}</span>
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                            مطلوب
+                          </span>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 2L3 7v4c0 5.55 3.84 9.74 9 11 5.16-1.26 9-5.45 9-11V7l-7-5z" clipRule="evenodd" />
+                  </svg>
+                  <p>لا توجد شهادات محددة مطلوبة لهذه المناقصة</p>
                   <p className="text-xs mt-1">يُرجى الرجوع إلى الوثائق التفصيلية</p>
                 </div>
               )}

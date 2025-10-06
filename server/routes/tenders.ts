@@ -107,53 +107,80 @@ export const getTenderById: RequestHandler = (req, res) => {
             return;
           }
           
-          // For now, skip license associations until the system is fully unified
-          const licenses: any[] = [];
-          
-          // Create tender details with only real data from database
-          const tenderDetails = {
-            ...row,
-            // Only add description if project_description exists
-            description: row.project_description || null,
-            // No hardcoded technical requirements - will be added via database later
-            technicalRequirements: null,
-            // No hardcoded financial requirements - will be added via database later  
-            financialRequirements: null,
-            // Only add contact info if exists in database
-            contactInfo: {
-              email: row.coordinator_email || null,
-              phone: row.coordinator_phone || null,
-              address: row.city ? `${row.city}, المملكة العربية السعودية` : null
-            },
-            // Only include documents that actually exist
-            documents: [
-              row.file1_name && row.file1 ? {
-                name: row.file1_name,
-                url: `/api/tenders/${id}/file1`,
-                size: 'متاح للتنزيل'
-              } : null,
-              row.file2_name && row.file2 ? {
-                name: row.file2_name, 
-                url: `/api/tenders/${id}/file2`,
-                size: 'متاح للتنزيل'
-              } : null
-            ].filter(doc => doc !== null),
-            // No sample activities - will get real activities from database
-            activities: [],
-            // No fake stats - will get real stats from database 
-            stats: {
-              offersCount: 0,
-              inquiriesCount: 0,  
-              viewsCount: 0
+          // Get associated licenses
+          db.all(
+            `SELECT l.ID, l.Name 
+             FROM tender_licenses tl
+             JOIN Licenses l ON tl.license_id = l.ID
+             WHERE tl.tender_id = ?`,
+            [id],
+            (licenseErr, licenses) => {
+              if (licenseErr) {
+                console.error("Error fetching tender licenses:", licenseErr);
+              }
+              
+              // Get associated certificates
+              db.all(
+                `SELECT c.ID, c.Name 
+                 FROM tender_certificates tc
+                 JOIN Certificates c ON tc.certificate_id = c.ID
+                 WHERE tc.tender_id = ?`,
+                [id],
+                (certErr, certificates) => {
+                  if (certErr) {
+                    console.error("Error fetching tender certificates:", certErr);
+                  }
+                  
+                  // Create tender details with real data from database
+                  const tenderDetails = {
+                    ...row,
+                    // Only add description if project_description exists
+                    description: row.project_description || null,
+                    // No hardcoded technical requirements - will be added via database later
+                    technicalRequirements: null,
+                    // No hardcoded financial requirements - will be added via database later  
+                    financialRequirements: null,
+                    // Only add contact info if exists in database
+                    contactInfo: {
+                      email: row.coordinator_email || null,
+                      phone: row.coordinator_phone || null,
+                      address: row.city ? `${row.city}, المملكة العربية السعودية` : null
+                    },
+                    // Only include documents that actually exist
+                    documents: [
+                      row.file1_name && row.file1 ? {
+                        name: row.file1_name,
+                        url: `/api/tenders/${id}/file1`,
+                        size: 'متاح للتنزيل'
+                      } : null,
+                      row.file2_name && row.file2 ? {
+                        name: row.file2_name, 
+                        url: `/api/tenders/${id}/file2`,
+                        size: 'متاح للتنزيل'
+                      } : null
+                    ].filter(doc => doc !== null),
+                    // No sample activities - will get real activities from database
+                    activities: [],
+                    // No fake stats - will get real stats from database 
+                    stats: {
+                      offersCount: 0,
+                      inquiriesCount: 0,  
+                      viewsCount: 0
+                    }
+                  };
+                  
+                  res.json({
+                    tender: tenderDetails,
+                    subDomains: subDomains || [],
+                    licenses: licenses || [],
+                    certificates: certificates || [],
+                    requiredLicenses: licenses || [], // For backward compatibility
+                    requiredCertificates: certificates || []
+                  });
+                }
+              );
             }
-          };
-          
-          res.json({
-            tender: tenderDetails,
-            subDomains: subDomains || [],
-            licenses: licenses || [],
-            requiredLicenses: licenses || [] // For backward compatibility
-          });
+          );
         }
       );
     }
@@ -347,16 +374,39 @@ export const createTender: RequestHandler = (req, res) => {
               completeTenderCreation();
             }
           } else {
-            // For now, we'll store license codes directly since the license system needs to be unified
             parsedRequiredLicenses.forEach((licenseCode: string) => {
-              // For simplicity, create a license association record with the code
-              // This will be updated once the license system is unified
               console.log("Adding license requirement:", licenseCode);
               
-              insertedLicenses++;
-              if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
-                completeTenderCreation();
-              }
+              // First, find the license ID by code (name)
+              db.get(
+                "SELECT ID FROM Licenses WHERE Name = ?",
+                [licenseCode],
+                (licenseErr, licenseRow: any) => {
+                  if (licenseErr) {
+                    console.error("Error finding license:", licenseErr);
+                  } else if (licenseRow) {
+                    // Insert into tender_licenses table
+                    db.run(
+                      "INSERT INTO tender_licenses (tender_id, license_id) VALUES (?, ?)",
+                      [tenderId, licenseRow.ID],
+                      (insertErr) => {
+                        if (insertErr) {
+                          console.error("Error inserting tender license:", insertErr);
+                        } else {
+                          console.log(`✅ Inserted license relationship: tender ${tenderId} -> license ${licenseRow.ID}`);
+                        }
+                      }
+                    );
+                  } else {
+                    console.warn(`⚠️ License not found: ${licenseCode}`);
+                  }
+                  
+                  insertedLicenses++;
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+                    completeTenderCreation();
+                  }
+                }
+              );
             });
           }
 
@@ -368,14 +418,39 @@ export const createTender: RequestHandler = (req, res) => {
               completeTenderCreation();
             }
           } else {
-            // For now, we'll store certificate codes directly since the certificate system is simple
             parsedRequiredCertificates.forEach((certificateCode: string) => {
               console.log("Adding certificate requirement:", certificateCode);
               
-              insertedCertificates++;
-              if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
-                completeTenderCreation();
-              }
+              // First, find the certificate ID by code (name)
+              db.get(
+                "SELECT ID FROM Certificates WHERE Name = ?",
+                [certificateCode],
+                (certErr, certRow: any) => {
+                  if (certErr) {
+                    console.error("Error finding certificate:", certErr);
+                  } else if (certRow) {
+                    // Insert into tender_certificates table
+                    db.run(
+                      "INSERT INTO tender_certificates (tender_id, certificate_id) VALUES (?, ?)",
+                      [tenderId, certRow.ID],
+                      (insertErr) => {
+                        if (insertErr) {
+                          console.error("Error inserting tender certificate:", insertErr);
+                        } else {
+                          console.log(`✅ Inserted certificate relationship: tender ${tenderId} -> certificate ${certRow.ID}`);
+                        }
+                      }
+                    );
+                  } else {
+                    console.warn(`⚠️ Certificate not found: ${certificateCode}`);
+                  }
+                  
+                  insertedCertificates++;
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+                    completeTenderCreation();
+                  }
+                }
+              );
             });
           }
         }

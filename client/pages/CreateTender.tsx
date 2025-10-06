@@ -106,7 +106,7 @@ export default function CreateTender() {
           const licenses = await response.json();
           const options = licenses.map((license: any) => ({
             value: license.code,
-            label: `${license.name_ar} - ${license.name_en}`,
+            label: license.name_ar, // Use just the Arabic name since both are the same
             category: license.category
           }));
           setLicenseOptions(options);
@@ -130,7 +130,7 @@ export default function CreateTender() {
           const certificates = await response.json();
           const options = certificates.map((cert: any) => ({
             value: cert.code,
-            label: `${cert.name_ar} - ${cert.name_en}`,
+            label: cert.name_ar, // Use just the Arabic name since both are the same
             category: cert.category
           }));
           setCertificateOptions(options);

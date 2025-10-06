@@ -5,23 +5,23 @@ import { SupplierLoginRequest, SupplierLoginResponse } from '@shared/api';
 export default function SupplierSignInPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError('');
+    setIsLoading(true);
+
     if (!email || !password) {
       setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-
     try {
-      const loginData: SupplierLoginRequest = {
+      const loginRequest: SupplierLoginRequest = {
         account_email: email,
         account_password: password
       };
@@ -31,23 +31,30 @@ export default function SupplierSignInPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(loginData)
+        body: JSON.stringify(loginRequest),
       });
 
-      const result: SupplierLoginResponse = await response.json();
+      const data: SupplierLoginResponse = await response.json();
 
-      if (result.success && result.supplier) {
-        // Store supplier info in localStorage for the session
-        localStorage.setItem('currentSupplier', JSON.stringify(result.supplier));
+      if (response.ok && data.success) {
+        // Store supplier info in localStorage
+        localStorage.setItem('supplierSession', JSON.stringify({
+          id: data.supplier.id,
+          account_name: data.supplier.account_name,
+          account_email: data.supplier.account_email,
+          company_name: data.supplier.company_name,
+          city: data.supplier.city,
+          industry: data.supplier.industry
+        }));
         
-        // Navigate to supplier home page
+        // Redirect to supplier home page (create this page if needed)
         navigate('/supplier/home');
       } else {
-        setError(result.message || 'فشل في تسجيل الدخول');
+        setError(data.message || 'فشل في تسجيل الدخول');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError('حدث خطأ في الاتصال بالخادم');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsLoading(false);
     }
@@ -66,18 +73,24 @@ export default function SupplierSignInPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Email Field */}
           <div>
             <label className="block text-sm text-gray-600 mb-2">
               البريد الإلكتروني أو اسم المستخدم
             </label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="أدخل بريدك الإلكتروني"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-colors"
-              disabled={isLoading}
             />
           </div>
 
@@ -92,22 +105,14 @@ export default function SupplierSignInPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="أدخل كلمة المرور"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-colors"
-              disabled={isLoading}
             />
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-lg">
-              {error}
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
           >
             {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
           </button>

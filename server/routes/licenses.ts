@@ -14,30 +14,28 @@ export interface License {
 // Get all licenses
 export const getLicenses: RequestHandler = (req, res) => {
   try {
-    // First try the new licenses table, fall back to Licenses table
+    // Try the Licenses table first (this is what we have)
     db.all(`
-      SELECT * FROM licenses 
-      ORDER BY name_ar
+      SELECT ID as id, Name as name 
+      FROM Licenses 
+      ORDER BY Name
     `, [], (err, licenses) => {
       if (err) {
-        // Try the original Licenses table
-        db.all(`
-          SELECT ID as id, Name as code, Name as name_ar, Name as name_en 
-          FROM Licenses 
-          ORDER BY Name
-        `, [], (err2, licensesFromOld) => {
-          if (err2) {
-            console.error('Error fetching licenses from both tables:', err, err2);
-            res.status(500).json({ error: 'خطأ في الخادم' });
-            return;
-          }
-
-          res.json(licensesFromOld || []);
-        });
+        console.error('Error fetching licenses from database:', err);
+        res.status(500).json({ error: 'خطأ في الخادم' });
         return;
       }
 
-      res.json(licenses || []);
+      // Transform database results to match frontend expectations
+      const transformedLicenses = (licenses || []).map((license: any) => ({
+        id: license.id,
+        code: license.name, // Use name as code for simplicity
+        name_ar: license.name, // Use the name for both Arabic and English
+        name_en: license.name,
+        category: 'general' // Default category
+      }));
+
+      res.json(transformedLicenses);
     });
   } catch (error) {
     console.error('Error fetching licenses:', error);
@@ -50,30 +48,14 @@ export const getLicenseByCode: RequestHandler = (req, res) => {
   try {
     const { code } = req.params;
     
-    // First try the new licenses table, fall back to Licenses table  
     db.get(`
-      SELECT * FROM licenses 
-      WHERE code = ?
-    `, [code], (err, license) => {
+      SELECT ID as id, Name as name 
+      FROM Licenses 
+      WHERE Name = ? OR ID = ?
+    `, [code, parseInt(code) || 0], (err, license) => {
       if (err) {
-        // Try the original Licenses table
-        db.get(`
-          SELECT ID as id, Name as code, Name as name_ar, Name as name_en 
-          FROM Licenses 
-          WHERE Name = ? OR ID = ?
-        `, [code, parseInt(code) || 0], (err2, licenseFromOld) => {
-          if (err2) {
-            console.error('Error fetching license from both tables:', err, err2);
-            res.status(500).json({ error: 'خطأ في الخادم' });
-            return;
-          }
-
-          if (!licenseFromOld) {
-            return res.status(404).json({ error: 'الرخصة غير موجودة' });
-          }
-
-          res.json(licenseFromOld);
-        });
+        console.error('Error fetching license from database:', err);
+        res.status(500).json({ error: 'خطأ في الخادم' });
         return;
       }
 
@@ -81,7 +63,16 @@ export const getLicenseByCode: RequestHandler = (req, res) => {
         return res.status(404).json({ error: 'الرخصة غير موجودة' });
       }
 
-      res.json(license);
+      // Transform database result to match frontend expectations
+      const transformedLicense = {
+        id: license.id,
+        code: license.name,
+        name_ar: license.name,
+        name_en: license.name,
+        category: 'general'
+      };
+
+      res.json(transformedLicense);
     });
   } catch (error) {
     console.error('Error fetching license:', error);

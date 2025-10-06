@@ -1,48 +1,37 @@
-const fetch = require('node-fetch');
-
-async function testAPI() {
-  console.log('Testing API endpoints...');
-  
+// Test the licenses and certificates API endpoints
+async function testAPIs() {
   try {
-    // Test domains endpoint
-    console.log('\n=== Testing /api/domains ===');
-    const domainsResponse = await fetch('http://localhost:8081/api/domains');
-    if (domainsResponse.ok) {
-      const domainsData = await domainsResponse.json();
-      console.log('✅ Domains endpoint working');
-      console.log('Found', domainsData.domains.length, 'domains');
-      console.log('First few domains:', domainsData.domains.slice(0, 3));
+    console.log('🧪 Testing Licenses API...');
+    const licensesResponse = await fetch('http://localhost:8080/api/licenses');
+    
+    if (!licensesResponse.ok) {
+      console.error('❌ Licenses API failed:', licensesResponse.status, licensesResponse.statusText);
     } else {
-      console.log('❌ Domains endpoint failed:', domainsResponse.status);
+      const licenses = await licensesResponse.json();
+      console.log(`✅ Licenses API working - Found ${licenses.length} licenses`);
+      console.log('📋 First few licenses:');
+      licenses.slice(0, 3).forEach(license => {
+        console.log(`   - ID: ${license.id}, Code: ${license.code}, Name: ${license.name_ar}`);
+      });
     }
-
-    // Test sub-domains endpoint
-    console.log('\n=== Testing /api/sub-domains ===');
-    const subDomainsResponse = await fetch('http://localhost:8081/api/sub-domains');
-    if (subDomainsResponse.ok) {
-      const subDomainsData = await subDomainsResponse.json();
-      console.log('✅ Sub-domains endpoint working');
-      console.log('Found', subDomainsData.subDomains.length, 'sub-domains');
-      console.log('First few sub-domains:', subDomainsData.subDomains.slice(0, 3));
+    
+    console.log('\n🧪 Testing Certificates API...');
+    const certificatesResponse = await fetch('http://localhost:8080/api/certificates');
+    
+    if (!certificatesResponse.ok) {
+      console.error('❌ Certificates API failed:', certificatesResponse.status, certificatesResponse.statusText);
     } else {
-      console.log('❌ Sub-domains endpoint failed:', subDomainsResponse.status);
+      const certificates = await certificatesResponse.json();
+      console.log(`✅ Certificates API working - Found ${certificates.length} certificates`);
+      console.log('📜 First few certificates:');
+      certificates.slice(0, 3).forEach(cert => {
+        console.log(`   - ID: ${cert.id}, Code: ${cert.code}, Name: ${cert.name_ar}`);
+      });
     }
-
-    // Test sub-domains by domain endpoint
-    console.log('\n=== Testing /api/domains/1/sub-domains ===');
-    const domainSubDomainsResponse = await fetch('http://localhost:8081/api/domains/1/sub-domains');
-    if (domainSubDomainsResponse.ok) {
-      const domainSubDomainsData = await domainSubDomainsResponse.json();
-      console.log('✅ Domain-specific sub-domains endpoint working');
-      console.log('Found', domainSubDomainsData.subDomains.length, 'sub-domains for domain 1');
-      console.log('Sub-domains for domain 1:', domainSubDomainsData.subDomains);
-    } else {
-      console.log('❌ Domain-specific sub-domains endpoint failed:', domainSubDomainsResponse.status);
-    }
-
+    
   } catch (error) {
-    console.error('❌ Error testing API:', error.message);
+    console.error('❌ Error testing APIs:', error);
   }
 }
 
-testAPI();
+testAPIs();
