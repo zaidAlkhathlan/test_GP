@@ -38,7 +38,9 @@ export default function CreateTender() {
     coordinatorName: '',
     coordinatorEmail: '',
     coordinatorPhone: '',
-    expectedBudget: ''
+    expectedBudget: '',
+    evaluationCriteria: '',
+    usedTechnologies: ''
   });
   
   // File upload state
@@ -261,6 +263,10 @@ export default function CreateTender() {
       // Add required licenses and certificates
       formDataToSend.append('required_licenses', JSON.stringify(selectedLicenses.map(l => l.value)));
       formDataToSend.append('required_certificates', JSON.stringify(selectedCertificates.map(c => c.value)));
+      
+      // Add evaluation criteria and used technologies
+      formDataToSend.append('evaluation_criteria', formData.evaluationCriteria);
+      formDataToSend.append('used_technologies', formData.usedTechnologies);
       
       // Add files if they exist
       if (file1) {
@@ -486,12 +492,28 @@ export default function CreateTender() {
           {step === 3 && (
             <div>
               <h2 className="text-right text-lg font-semibold mb-4">الوصف والمتطلبات</h2>
-              <textarea 
-                className="w-full border rounded p-3 h-48 bg-white" 
-                placeholder="وصف المشروع والمتطلبات"
-                value={formData.projectDescription}
-                onChange={(e) => updateFormData('projectDescription', e.target.value)}
-              />
+              <div className="space-y-4">
+                <textarea 
+                  className="w-full border rounded p-3 h-48 bg-white" 
+                  placeholder="وصف المشروع والمتطلبات"
+                  value={formData.projectDescription}
+                  onChange={(e) => updateFormData('projectDescription', e.target.value)}
+                />
+                
+                <textarea 
+                  className="w-full border rounded p-3 h-32 bg-white" 
+                  placeholder="معايير التقييم (اختياري)"
+                  value={formData.evaluationCriteria}
+                  onChange={(e) => updateFormData('evaluationCriteria', e.target.value)}
+                />
+                
+                <textarea 
+                  className="w-full border rounded p-3 h-32 bg-white" 
+                  placeholder="التقنيات المستخدمة (اختياري)"
+                  value={formData.usedTechnologies}
+                  onChange={(e) => updateFormData('usedTechnologies', e.target.value)}
+                />
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 {/* File Upload Slot 1 */}

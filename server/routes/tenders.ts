@@ -185,6 +185,8 @@ export const createTender: RequestHandler = (req, res) => {
     quires_deadline,
     contract_time,
     previous_work,
+    evaluation_criteria,
+    used_technologies,
     tender_coordinator,
     coordinator_email,
     coordinator_phone,
@@ -264,13 +266,13 @@ export const createTender: RequestHandler = (req, res) => {
         `INSERT INTO tender (
           buyer_id, reference_number, title, domain_id, project_description,
           city, submit_deadline, quires_deadline, contract_time, previous_work,
-          tender_coordinator, coordinator_email, coordinator_phone, 
+          evaluation_criteria, used_technologies, tender_coordinator, coordinator_email, coordinator_phone, 
           file1, file2, file1_name, file2_name, expected_budget, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
           buyer_id, nextRefNumber, title, domain_id, project_description,
           city, submit_deadline, quires_deadline, contract_time, previous_work,
-          tender_coordinator, coordinator_email, coordinator_phone,
+          evaluation_criteria || null, used_technologies || null, tender_coordinator, coordinator_email, coordinator_phone,
           file1Data, file2Data, file1Name, file2Name, parseFloat(expected_budget) || null
         ],
         function(err) {
@@ -472,6 +474,92 @@ export const getTendersByDomain: RequestHandler = (req, res) => {
         return;
       }
       res.json({ tenders: rows || [] });
+    }
+  );
+};
+
+// Download tender file1
+export const downloadTenderFile1: RequestHandler = (req, res) => {
+  const { id } = req.params;
+
+  db.get(
+    "SELECT file1, file1_name FROM tender WHERE id = ?",
+    [id],
+    (err, row: any) => {
+      if (err) {
+        console.error("Error fetching file:", err);
+        res.status(500).json({ error: "Failed to fetch file" });
+        return;
+      }
+
+      if (!row || !row.file1) {
+        res.status(404).json({ error: "File not found" });
+        return;
+      }
+
+      // Set appropriate headers
+      const filename = row.file1_name || `tender_${id}_file1`;
+      const extension = filename.split('.').pop()?.toLowerCase();
+      
+      let contentType = 'application/octet-stream';
+      if (extension === 'pdf') {
+        contentType = 'application/pdf';
+      } else if (extension === 'doc') {
+        contentType = 'application/msword';
+      } else if (extension === 'docx') {
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (['jpg', 'jpeg'].includes(extension || '')) {
+        contentType = 'image/jpeg';
+      } else if (extension === 'png') {
+        contentType = 'image/png';
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.send(row.file1);
+    }
+  );
+};
+
+// Download tender file2
+export const downloadTenderFile2: RequestHandler = (req, res) => {
+  const { id } = req.params;
+
+  db.get(
+    "SELECT file2, file2_name FROM tender WHERE id = ?",
+    [id],
+    (err, row: any) => {
+      if (err) {
+        console.error("Error fetching file:", err);
+        res.status(500).json({ error: "Failed to fetch file" });
+        return;
+      }
+
+      if (!row || !row.file2) {
+        res.status(404).json({ error: "File not found" });
+        return;
+      }
+
+      // Set appropriate headers
+      const filename = row.file2_name || `tender_${id}_file2`;
+      const extension = filename.split('.').pop()?.toLowerCase();
+      
+      let contentType = 'application/octet-stream';
+      if (extension === 'pdf') {
+        contentType = 'application/pdf';
+      } else if (extension === 'doc') {
+        contentType = 'application/msword';
+      } else if (extension === 'docx') {
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (['jpg', 'jpeg'].includes(extension || '')) {
+        contentType = 'image/jpeg';
+      } else if (extension === 'png') {
+        contentType = 'image/png';
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.send(row.file2);
     }
   );
 };

@@ -9,7 +9,7 @@ import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
-import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain } from './routes/tenders';
+import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 
@@ -68,6 +68,8 @@ export function createServer() {
   // Tender routes
   app.get('/api/tenders', getTenders);
   app.get('/api/tenders/:id', getTenderById);
+  app.get('/api/tenders/:id/file1', downloadTenderFile1);
+  app.get('/api/tenders/:id/file2', downloadTenderFile2);
   app.post('/api/tenders', upload.fields([
     { name: 'file1', maxCount: 1 },
     { name: 'file2', maxCount: 1 }

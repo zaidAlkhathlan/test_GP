@@ -23,6 +23,8 @@ export default function TenderDetails() {
         
         const data = await response.json();
         console.log('Tender data:', data); // Debug log
+        console.log('Sub-domains:', data.subDomains); // Debug log
+        console.log('Tender domain name:', data.tender?.domain_name); // Debug log
         setTenderData(data);
       } catch (err) {
         console.error('Error fetching tender details:', err);
@@ -49,11 +51,11 @@ export default function TenderDetails() {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
+    return date.toLocaleDateString('en-GB', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
-    });
+    }).split('/').reverse().join('/');
   };
 
   // Function to create progress circle
@@ -104,7 +106,7 @@ export default function TenderDetails() {
     );
   }
 
-  const { tender, licenses = [] } = tenderData;
+  const { tender, licenses = [], subDomains = [] } = tenderData;
   const remainingOfferDays = getRemainingDays(tender.submit_deadline);
   const remainingInquiryDays = getRemainingDays(tender.quires_deadline);
 
@@ -117,7 +119,6 @@ export default function TenderDetails() {
           <div className="flex items-center justify-between mb-8">
             <div className="text-right">
               <h2 className="text-2xl font-semibold text-green-700 mb-2">{tender.title || 'بناء ورشة سيارات'}</h2>
-              <p className="text-gray-600">{tender.buyer_company || tender.company_name || 'مؤسسة بناء المنشآت'}</p>
             </div>
             <div>
               <Link to={id ? `/tender/${id}/offers` : '#'} className="inline-flex items-center gap-2 px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
@@ -156,10 +157,40 @@ export default function TenderDetails() {
                   <span className="text-gray-900 font-medium">{tender.city || 'الرياض'}</span>
                 </div>
                 
-                <div className="flex justify-between items-center py-4">
+                <div className="flex justify-between items-center py-4 border-b border-gray-100">
                   <span className="text-gray-500">مدة التنفيذ</span>
                   <span className="text-gray-900 font-medium">{tender.contract_time || 'غير محدد'}</span>
                 </div>
+                
+                <div className="flex justify-between items-center py-4 border-b border-gray-100">
+                  <span className="text-gray-500">النشاط الرئيسي</span>
+                  <div className="text-right">
+                    {tender.domain_name ? (
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                        <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        {tender.domain_name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 text-sm">غير محدد</span>
+                    )}
+                  </div>
+                </div>
+                
+                {subDomains && subDomains.length > 0 && (
+                  <div className="flex justify-between items-start py-4">
+                    <span className="text-gray-500">الأنشطة الفرعية</span>
+                    <div className="text-right space-y-2">
+                      <div className="flex flex-wrap gap-2 justify-end">
+                        {subDomains.map((subDomain: any, index: number) => (
+                          <span key={subDomain.ID} className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+                            {subDomain.Name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>st
+                )}
               </div>
             </div>
 
@@ -294,6 +325,40 @@ export default function TenderDetails() {
               </div>
             )}
 
+            {/* Show evaluation criteria if it exists */}
+            {tender.evaluation_criteria && (
+              <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h4 className="font-semibold text-lg">معايير التقييم</h4>
+                </div>
+                <p className="text-gray-600 leading-relaxed">
+                  {tender.evaluation_criteria}
+                </p>
+              </div>
+            )}
+
+            {/* Show used technologies if it exists */}
+            {tender.used_technologies && (
+              <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <h4 className="font-semibold text-lg">التقنيات المستخدمة</h4>
+                </div>
+                <p className="text-gray-600 leading-relaxed">
+                  {tender.used_technologies}
+                </p>
+              </div>
+            )}
+
             {/* Only show technical requirements if they exist */}
             {tender.technicalRequirements && tender.technicalRequirements.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
@@ -391,14 +456,18 @@ export default function TenderDetails() {
                 <div className="space-y-3">
                   {tender.documents.map((document: any, index: number) => (
                     document.name && (
-                      <div key={index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:bg-gray-50">
                         <div className="flex-1">
                           <span className="text-sm text-gray-900 font-medium block">{document.name}</span>
                           {document.size && <span className="text-xs text-gray-500">{document.size}</span>}
                         </div>
-                        <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
+                        <a 
+                          href={document.url} 
+                          download={document.name}
+                          className="px-3 py-1.5 bg-tawreed-green text-white text-sm rounded hover:bg-green-600 transition-colors"
+                        >
+                          تحميل
+                        </a>
                       </div>
                     )
                   ))}
