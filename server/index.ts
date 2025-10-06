@@ -12,6 +12,18 @@ import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/do
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
+import { 
+  getBuyerLicenses, 
+  getBuyerCertificates, 
+  getSupplierLicenses, 
+  getSupplierCertificates,
+  addBuyerLicense,
+  removeBuyerLicense,
+  addBuyerCertificate,
+  removeBuyerCertificate,
+  getAllAvailableLicenses,
+  getAllAvailableCertificates
+} from './routes/company-profile';
 
 // Configure multer for file uploads (store in memory)
 const upload = multer({
@@ -90,6 +102,22 @@ export function createServer() {
   // Certificate routes
   app.get('/api/certificates', getAllCertificates);
   app.get('/api/certificates/:code', getCertificateByCode);
+
+  // Company profile routes
+  app.get('/api/buyers/:id/licenses', getBuyerLicenses);
+  app.get('/api/buyers/:id/certificates', getBuyerCertificates);
+  app.get('/api/suppliers/:id/licenses', getSupplierLicenses);
+  app.get('/api/suppliers/:id/certificates', getSupplierCertificates);
+  
+  // Add/remove licenses and certificates
+  app.post('/api/buyers/:id/licenses', addBuyerLicense);
+  app.delete('/api/buyers/:id/licenses/:licenseId', removeBuyerLicense);
+  app.post('/api/buyers/:id/certificates', addBuyerCertificate);
+  app.delete('/api/buyers/:id/certificates/:certificateId', removeBuyerCertificate);
+  
+  // Get all available licenses and certificates for selection
+  app.get('/api/available-licenses', getAllAvailableLicenses);
+  app.get('/api/available-certificates', getAllAvailableCertificates);
   
   // Initialize DB in background
   initDatabase().catch((error) => {

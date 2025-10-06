@@ -21,6 +21,7 @@ import CreateTender from "./pages/CreateTender";
 import SupplierSignIn from "./pages/SupplierSignIn";
 import SupplierHome from "./pages/SupplierHome";
 import AvailableTenders from "./pages/AvailableTenders";
+import CompanyProfile from "./pages/CompanyProfile";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />
           <Route path="/available-tenders" element={<AvailableTenders />} />
+          <Route path="/company-profile" element={<CompanyProfile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

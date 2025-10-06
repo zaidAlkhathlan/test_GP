@@ -144,9 +144,12 @@ export default function Header({ userType, className = '' }: HeaderProps) {
             {currentUser && (
               <div className="flex items-center gap-4">
                 {/* Company Button */}
-                <div className="bg-tawreed-green text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap">
+                <Link 
+                  to="/company-profile" 
+                  className="bg-tawreed-green text-white px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap hover:bg-green-600 transition-colors cursor-pointer"
+                >
                   مؤسسة: {currentUser.company_name}
-                </div>
+                </Link>
                 
                 {/* User Info Section */}
                 <div className="flex items-center gap-3">
