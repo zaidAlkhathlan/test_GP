@@ -44,7 +44,11 @@ export default function SupplierSignInPage() {
           account_email: data.supplier.account_email,
           company_name: data.supplier.company_name,
           city: data.supplier.city,
-          industry: data.supplier.industry
+          commercial_registration_number: data.supplier.commercial_registration_number,
+          commercial_phone_number: data.supplier.commercial_phone_number,
+          account_phone: data.supplier.account_phone,
+          domain: data.supplier.domain,
+          created_at: data.supplier.created_at
         }));
         
         // Redirect to supplier home page (create this page if needed)

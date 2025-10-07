@@ -104,7 +104,8 @@ export const loginSupplier: RequestHandler = (req, res) => {
 
   console.log("🔍 Searching for supplier with email:", account_email);
 
-  db.get("SELECT * FROM Supplier WHERE account_email = ?", [account_email], (err: Error | null, row: any) => {
+  // Query supplier from the new schema using Account_email column
+  db.get("SELECT * FROM Supplier WHERE Account_email = ?", [account_email], (err: Error | null, row: any) => {
     if (err) {
       console.error("❌ Database error:", err);
       return res.status(500).json({
@@ -124,7 +125,7 @@ export const loginSupplier: RequestHandler = (req, res) => {
     console.log("✅ Found supplier:", row.company_name);
 
     // Check password (in production, you should hash passwords)
-    if (row.account_password !== account_password) {
+    if (row.Account_password !== account_password) {
       console.log("❌ Password mismatch");
       return res.status(401).json({
         success: false,
@@ -134,19 +135,32 @@ export const loginSupplier: RequestHandler = (req, res) => {
 
     console.log("✅ Password match - login successful");
 
-    // Return supplier info without password
-    const supplierInfo = {
-      id: row.id,
-      company_name: row.company_name,
-      account_name: row.account_name,
-      account_email: row.account_email,
-      city: row.city,
-      industry: row.industry
-    };
+    // Get domain information for the supplier
+    db.get("SELECT Name FROM domains WHERE ID = ?", [row.domains_id], (domainErr: Error | null, domainRow: any) => {
+      const domainName = domainRow?.Name || '';
+      
+      if (domainErr) {
+        console.warn("⚠️ Could not fetch domain info:", domainErr);
+      }
 
-    res.json({
-      success: true,
-      supplier: supplierInfo
+      // Return supplier info without password - using new schema column names
+      const supplierInfo = {
+        id: row.ID,
+        company_name: row.company_name,
+        account_name: row.Account_name,
+        account_email: row.Account_email,
+        city: row.City,
+        commercial_registration_number: row.Commercial_registration_number,
+        commercial_phone_number: row.Commercial_Phone_number,
+        account_phone: row.Account_phone,
+        domain: domainName,
+        created_at: row.created_at
+      };
+
+      res.json({
+        success: true,
+        supplier: supplierInfo
+      });
     });
   });
 };

@@ -108,6 +108,7 @@ export async function initDatabase() {
   `;
 
   // Certificates and Buyer-Certificates relationship
+  // Create certificates tables
   const createCertificatesTable = `
     CREATE TABLE IF NOT EXISTS Certificates (
       ID INTEGER PRIMARY KEY,
@@ -128,6 +129,77 @@ export async function initDatabase() {
   const createBuyerCertificatesIndexes = `
     CREATE INDEX IF NOT EXISTS idx_bc_buyer ON Buyer_Certificates(buyer_id);
     CREATE INDEX IF NOT EXISTS idx_bc_certificate ON Buyer_Certificates(certificate_id);
+  `;
+
+  // Supplier table - mirrors Buyer table structure
+  const createSupplierTable = `
+    CREATE TABLE IF NOT EXISTS Supplier (
+      ID INTEGER PRIMARY KEY,
+      Commercial_registration_number TEXT NOT NULL,
+      Commercial_Phone_number TEXT NOT NULL,
+      domains_id INTEGER NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      City TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      Logo TEXT NOT NULL,
+      Account_name TEXT NOT NULL,
+      Account_email TEXT NOT NULL UNIQUE,
+      Account_phone INTEGER NOT NULL,
+      company_name TEXT NOT NULL,
+      Account_password TEXT NOT NULL,
+      FOREIGN KEY (domains_id) REFERENCES domains(ID)
+    );
+  `;
+
+  const createSupplierDomainIndex = `CREATE INDEX IF NOT EXISTS idx_supplier_domain ON Supplier(domains_id);`;
+
+  // Supplier ↔ Sub_Domains (M:N) relationship - mirrors buyer_sub_domains
+  const createSupplierSubDomainsTable = `
+    CREATE TABLE IF NOT EXISTS supplier_sub_domains (
+      supplier_id INTEGER NOT NULL,
+      sub_domains_id INTEGER NOT NULL,
+      Name TEXT NOT NULL,
+      PRIMARY KEY (supplier_id, sub_domains_id),
+      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID),
+      FOREIGN KEY (sub_domains_id) REFERENCES sub_domains(ID)
+    );
+  `;
+
+  const createSupplierSubDomainsIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_ssd_supplier ON supplier_sub_domains(supplier_id);
+    CREATE INDEX IF NOT EXISTS idx_ssd_subd ON supplier_sub_domains(sub_domains_id);
+  `;
+
+  // Supplier-Licenses relationship - mirrors Buyer_Licenses
+  const createSupplierLicensesTable = `
+    CREATE TABLE IF NOT EXISTS Supplier_Licenses (
+      supplier_id INTEGER NOT NULL,
+      license_id INTEGER NOT NULL,
+      PRIMARY KEY (supplier_id, license_id),
+      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID),
+      FOREIGN KEY (license_id) REFERENCES Licenses(ID)
+    );
+  `;
+
+  const createSupplierLicensesIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_sl_supplier ON Supplier_Licenses(supplier_id);
+    CREATE INDEX IF NOT EXISTS idx_sl_license ON Supplier_Licenses(license_id);
+  `;
+
+  // Supplier-Certificates relationship - mirrors Buyer_Certificates
+  const createSupplierCertificatesTable = `
+    CREATE TABLE IF NOT EXISTS Supplier_Certificates (
+      supplier_id INTEGER NOT NULL,
+      certificate_id INTEGER NOT NULL,
+      PRIMARY KEY (supplier_id, certificate_id),
+      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID),
+      FOREIGN KEY (certificate_id) REFERENCES Certificates(ID)
+    );
+  `;
+
+  const createSupplierCertificatesIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_sc_supplier ON Supplier_Certificates(supplier_id);
+    CREATE INDEX IF NOT EXISTS idx_sc_certificate ON Supplier_Certificates(certificate_id);
   `;
 
   // Existing inquiry tables
@@ -283,6 +355,16 @@ export async function initDatabase() {
     realDb.run(createCertificatesTable);
     realDb.run(createBuyerCertificatesTable);
     realDb.run(createBuyerCertificatesIndexes);
+    
+    // Create supplier and related tables (mirroring buyer structure)
+    realDb.run(createSupplierTable);
+    realDb.run(createSupplierDomainIndex);
+    realDb.run(createSupplierSubDomainsTable);
+    realDb.run(createSupplierSubDomainsIndexes);
+    realDb.run(createSupplierLicensesTable);
+    realDb.run(createSupplierLicensesIndexes);
+    realDb.run(createSupplierCertificatesTable);
+    realDb.run(createSupplierCertificatesIndexes);
     
     // Create existing inquiry tables
     realDb.run(createInquiriesTable);

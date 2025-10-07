@@ -7,6 +7,7 @@ import { initDatabase } from "./db";
 import { createBuyer } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
+import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
@@ -71,6 +72,13 @@ export function createServer() {
   app.post("/api/buyers", createBuyer);
   app.post("/api/auth/login", loginBuyer);
   app.post("/api/auth/supplier/login", loginSupplier);
+  
+  // Supplier routes
+  app.post("/api/suppliers", createSupplier);
+  app.get("/api/suppliers", getSuppliers);
+  app.get("/api/suppliers/:id", getSupplierById);
+  app.put("/api/suppliers/:id", updateSupplier);
+  app.delete("/api/suppliers/:id", deleteSupplier);
   
   // Domain routes
   app.get("/api/domains", getDomains);

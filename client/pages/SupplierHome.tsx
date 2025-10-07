@@ -7,7 +7,11 @@ interface SupplierSession {
   account_email: string;
   company_name: string;
   city: string;
-  industry: string;
+  commercial_registration_number: string;
+  commercial_phone_number: string;
+  account_phone: string;
+  domain: string;
+  created_at: string;
 }
 
 export default function SupplierHomePage() {
@@ -82,10 +86,16 @@ export default function SupplierHomePage() {
               <strong>المدينة:</strong> {supplier.city}
             </div>
             <div>
-              <strong>القطاع:</strong> {supplier.industry}
+              <strong>المجال:</strong> {supplier.domain}
+            </div>
+            <div>
+              <strong>رقم التسجيل التجاري:</strong> {supplier.commercial_registration_number}
             </div>
             <div>
               <strong>البريد الإلكتروني:</strong> {supplier.account_email}
+            </div>
+            <div>
+              <strong>رقم الهاتف:</strong> {supplier.commercial_phone_number}
             </div>
           </div>
         </div>

@@ -101,7 +101,11 @@ export interface SupplierLoginResponse {
     account_name: string;
     account_email: string;
     city: string;
-    industry: string;
+    commercial_registration_number: string;
+    commercial_phone_number: string;
+    account_phone: string;
+    domain: string;
+    created_at: string;
   };
   message?: string;
 }
