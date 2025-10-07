@@ -36,10 +36,14 @@ export default function Header({ userType, className = '' }: HeaderProps) {
   }, [userType]);
 
   const handleLogout = () => {
-    const storageKey = userType === 'buyer' ? 'currentBuyer' : 'currentSupplier';
-    localStorage.removeItem(storageKey);
-    const redirectPath = userType === 'buyer' ? '/buyer/signin' : '/supplier/signin';
-    navigate(redirectPath);
+    if (userType === 'buyer') {
+      localStorage.removeItem('currentBuyer');
+      navigate('/buyer/signin');
+    } else {
+      localStorage.removeItem('currentSupplier');
+      localStorage.removeItem('supplierSession');
+      navigate('/supplier/signin');
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -58,8 +62,8 @@ export default function Header({ userType, className = '' }: HeaderProps) {
   ];
 
   const supplierNavItems = [
-    { label: 'المناقصات المتاحة', path: '/supplier/tenders' },
-    { label: 'عروضي', path: '/supplier/offers' },
+    { label: 'المناقصات المتاحة', path: '/available-tenders' },
+    { label: 'المناقصات المقدّم عليها', path: '/supplier/offers' },
     { label: 'المناقصات المنتهية', path: '/supplier/expired' },
     { label: 'من نحن', path: '/about' },
     { label: 'اتصل بنا', path: '/contact' }

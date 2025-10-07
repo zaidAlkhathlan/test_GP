@@ -38,7 +38,7 @@ export default function SupplierSignInPage() {
 
       if (response.ok && data.success) {
         // Store supplier info in localStorage
-        localStorage.setItem('supplierSession', JSON.stringify({
+        const supplierData = {
           id: data.supplier.id,
           account_name: data.supplier.account_name,
           account_email: data.supplier.account_email,
@@ -49,9 +49,13 @@ export default function SupplierSignInPage() {
           account_phone: data.supplier.account_phone,
           domain: data.supplier.domain,
           created_at: data.supplier.created_at
-        }));
+        };
         
-        // Redirect to supplier home page (create this page if needed)
+        // Store in both keys for compatibility
+        localStorage.setItem('supplierSession', JSON.stringify(supplierData));
+        localStorage.setItem('currentSupplier', JSON.stringify(supplierData));
+        
+        // Redirect to supplier home page
         navigate('/supplier/home');
       } else {
         setError(data.message || 'فشل في تسجيل الدخول');

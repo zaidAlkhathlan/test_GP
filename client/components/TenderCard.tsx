@@ -93,12 +93,22 @@ export default function TenderCard({
               التفاصيل
             </Button>
           </Link>
-          <Button
-            className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
-            onClick={() => (userType === "buyer" && onViewOffers ? onViewOffers(tender.id) : null)}
-          >
-            العروض المقدمة
-          </Button>
+          {userType === "buyer" ? (
+            <Button
+              className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
+              onClick={() => onViewOffers && onViewOffers(tender.id)}
+            >
+              العروض المقدمة
+            </Button>
+          ) : (
+            <Link to={`/tender/${tender.id}/submit-offer`}>
+              <Button
+                className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
+              >
+                تقديم عرض
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 

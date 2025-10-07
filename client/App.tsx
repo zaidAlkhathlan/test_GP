@@ -22,6 +22,8 @@ import SupplierSignIn from "./pages/SupplierSignIn";
 import SupplierHome from "./pages/SupplierHome";
 import AvailableTenders from "./pages/AvailableTenders";
 import CompanyProfile from "./pages/CompanyProfile";
+import SubmitOffer from "./pages/SubmitOffer";
+import SupplierChat from "./pages/SupplierChat";
 
 const queryClient = new QueryClient();
 
@@ -43,10 +45,16 @@ const App = () => (
           <Route path="/tender/:id/quires" element={<Quires />} />
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />
+          <Route path="/tender/:id/chat" element={<SupplierChat />} />
+          <Route path="/tender/:id/submit-offer" element={<SubmitOffer />} />
           <Route path="/tender/:id/award/:offerId" element={<AwardedSupplier />} />
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />
           <Route path="/available-tenders" element={<AvailableTenders />} />
+          <Route path="/supplier/offers" element={<div className="p-8 text-center" dir="rtl">صفحة العروض قيد التطوير</div>} />
+          <Route path="/supplier/expired" element={<div className="p-8 text-center" dir="rtl">صفحة المناقصات المنتهية قيد التطوير</div>} />
+          <Route path="/about" element={<div className="p-8 text-center" dir="rtl">صفحة من نحن قيد التطوير</div>} />
+          <Route path="/contact" element={<div className="p-8 text-center" dir="rtl">صفحة اتصل بنا قيد التطوير</div>} />
           <Route path="/company-profile" element={<CompanyProfile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

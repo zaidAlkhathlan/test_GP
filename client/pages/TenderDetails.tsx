@@ -7,6 +7,19 @@ export default function TenderDetails() {
   const [tenderData, setTenderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userType, setUserType] = useState<'buyer' | 'supplier'>('buyer');
+
+  // Detect user type based on localStorage
+  useEffect(() => {
+    const buyerData = localStorage.getItem('currentBuyer');
+    const supplierData = localStorage.getItem('currentSupplier') || localStorage.getItem('supplierSession');
+    
+    if (supplierData && !buyerData) {
+      setUserType('supplier');
+    } else {
+      setUserType('buyer');
+    }
+  }, []);
 
   // Fetch tender details from backend
   useEffect(() => {
@@ -70,7 +83,7 @@ export default function TenderDetails() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header userType="buyer" />
+        <Header userType={userType} />
         <div className="max-w-[1200px] mx-auto px-6 py-10">
           <div className="bg-white rounded-lg shadow-sm p-8 animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
@@ -89,7 +102,7 @@ export default function TenderDetails() {
   if (error || !tenderData) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header userType="buyer" />
+        <Header userType={userType} />
         <div className="max-w-[1200px] mx-auto px-6 py-10">
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <div className="text-red-600 mb-4">
@@ -114,7 +127,7 @@ export default function TenderDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header userType="buyer" />
+      <Header userType={userType} />
       <div className="max-w-[1200px] mx-auto px-6 py-10">
         {/* Header Section */}
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8" dir="rtl">
@@ -122,10 +135,27 @@ export default function TenderDetails() {
             <div className="text-right">
               <h2 className="text-2xl font-semibold text-green-700 mb-2">{tender.title || 'بناء ورشة سيارات'}</h2>
             </div>
-            <div>
-              <Link to={id ? `/tender/${id}/offers` : '#'} className="inline-flex items-center gap-2 px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
-                العروض المقدمة
-              </Link>
+            <div className="flex gap-3">
+              {userType === 'buyer' ? (
+                <Link to={id ? `/tender/${id}/offers` : '#'} className="inline-flex items-center gap-2 px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
+                  العروض المقدمة
+                </Link>
+              ) : (
+                <>
+                  <Link to={id ? `/tender/${id}/quires` : '#'} className="inline-flex items-center gap-2 px-4 py-2 border border-tawreed-green text-tawreed-green rounded-lg hover:bg-green-50 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    الاستفسارات
+                  </Link>
+                  <Link to={id ? `/tender/${id}/submit-offer` : '#'} className="inline-flex items-center gap-2 px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    تقديم عرض
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -278,7 +308,7 @@ export default function TenderDetails() {
         )}
 
         {/* Additional Content - Stats and Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className={`grid grid-cols-1 ${userType === 'buyer' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 mb-8`}>
           <div className="bg-white rounded-lg shadow-sm p-6 text-right" dir="rtl">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-2xl">📅</div>
@@ -291,15 +321,17 @@ export default function TenderDetails() {
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm p-6 text-right" dir="rtl">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center text-2xl">📄</div>
-              <div>
-                <p className="text-sm text-gray-500">العروض المقدمة</p>
-                <p className="text-xl font-bold">{tender.stats?.offersCount || 0}</p>
+          {userType === 'buyer' && (
+            <div className="bg-white rounded-lg shadow-sm p-6 text-right" dir="rtl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center text-2xl">📄</div>
+                <div>
+                  <p className="text-sm text-gray-500">العروض المقدمة</p>
+                  <p className="text-xl font-bold">{tender.stats?.offersCount || 0}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
           <div className="bg-white rounded-lg shadow-sm p-6 text-right" dir="rtl">
             <div className="flex items-center gap-4">
@@ -475,6 +507,83 @@ export default function TenderDetails() {
           </div>
 
           <div className="space-y-6">
+            {/* Required Files Section for Suppliers */}
+            {userType === 'supplier' && (
+              <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h5 className="font-semibold text-lg">الملفات المطلوب تقديمها</h5>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 border border-gray-200 rounded-lg bg-blue-50">
+                    <div className="flex items-center gap-3 mb-2">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="font-medium text-blue-900">العرض الفني</span>
+                      <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full">مطلوب</span>
+                    </div>
+                    <p className="text-sm text-blue-800 mr-8">
+                      يجب أن يتضمن التفاصيل الفنية الكاملة للمشروع، الجدول الزمني للتنفيذ، والمواصفات التقنية المطلوبة
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 rounded-lg bg-green-50">
+                    <div className="flex items-center gap-3 mb-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                      </svg>
+                      <span className="font-medium text-green-900">العرض المالي</span>
+                      <span className="px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full">مطلوب</span>
+                    </div>
+                    <p className="text-sm text-green-800 mr-8">
+                      يتضمن التكلفة الإجمالية للمشروع، تفصيل الأسعار، وشروط الدفع المقترحة
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 rounded-lg bg-purple-50">
+                    <div className="flex items-center gap-3 mb-2">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                      <span className="font-medium text-purple-900">المستندات القانونية</span>
+                      <span className="px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">مطلوب</span>
+                    </div>
+                    <p className="text-sm text-purple-800 mr-8">
+                      السجل التجاري، شهادة الغرفة التجارية، والتراخيص المهنية ذات الصلة
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-gray-200 rounded-lg bg-yellow-50">
+                    <div className="flex items-center gap-3 mb-2">
+                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h2a1 1 0 011 1v2m-4 0h4" />
+                      </svg>
+                      <span className="font-medium text-yellow-900">الخبرات السابقة</span>
+                      <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs rounded-full">اختياري</span>
+                    </div>
+                    <p className="text-sm text-yellow-800 mr-8">
+                      نماذج من الأعمال السابقة المشابهة وشهادات العملاء السابقين
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>يرجى التأكد من رفع جميع الملفات المطلوبة قبل انتهاء موعد تقديم العروض</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
               <h5 className="font-semibold text-lg mb-4">ملفات المناقصة</h5>
               {tender.documents && tender.documents.length > 0 ? (

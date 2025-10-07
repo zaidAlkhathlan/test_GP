@@ -14,13 +14,26 @@ interface Inquiry {
 export default function Quires() {
   const { id } = useParams();
   const [inquiries, setInquiries] = useState<Inquiry[]>([
-    { id: 'q1', supplier: 'شركة الفارس', message: 'هل يمكن تمديد الموعد أسبوعاً؟', time: '10:05 AM' },
-    { id: 'q2', supplier: 'مؤسسة النور', message: 'هل تقبلون عروضاً بنظام الدفع على أقساط؟', time: '09:20 AM' },
-    { id: 'q3', supplier: 'الورشة المتحدة', message: 'ما هو حجم الموقع المراد بناؤه؟', time: '08:12 AM' }
+    { id: 'q1', supplier: 'شركة الفارس', message: 'هل يمكن تمديد الموعد أسبوعاً؟', time: '10:05 AM', answered: true, answer: 'نعم، تم تمديد الموعد أسبوعاً إضافياً. الموعد الجديد هو 15/08/2025' },
+    { id: 'q2', supplier: 'مؤسسة النور', message: 'هل تقبلون عروضاً بنظام الدفع على أقساط؟', time: '09:20 AM', answered: true, answer: 'نعم، نقبل نظام الدفع على أقساط بحد أقصى 3 أقساط متساوية' },
+    { id: 'q3', supplier: 'الورشة المتحدة', message: 'ما هو حجم الموقع المراد بناؤه؟', time: '08:12 AM', answered: true, answer: 'مساحة الموقع 500 متر مربع، وسيتم توفير المخططات التفصيلية لاحقاً' }
   ]);
 
   const [reply, setReply] = useState('');
   const [activeId, setActiveId] = useState<string | null>(inquiries[0]?.id ?? null);
+  const [userType, setUserType] = useState<'buyer' | 'supplier'>('buyer');
+
+  // Detect user type
+  React.useEffect(() => {
+    const buyerData = localStorage.getItem('currentBuyer');
+    const supplierData = localStorage.getItem('currentSupplier') || localStorage.getItem('supplierSession');
+    
+    if (supplierData && !buyerData) {
+      setUserType('supplier');
+    } else {
+      setUserType('buyer');
+    }
+  }, []);
 
   function sendAnswer() {
     if (!activeId) return;
@@ -30,14 +43,29 @@ export default function Quires() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <Header userType="buyer" />
+      <Header userType={userType} />
       <div className="max-w-[1100px] mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">الاستفسارات {id ? `- #${id}` : ''}</h1>
-            <p className="text-sm text-gray-500">قائمة الاستفسارات الواردة من الموردين للمناقصة. اجب عن الاستفسارات لتوضيح المتطلبات.</p>
+            <h1 className="text-2xl font-bold">
+              {userType === 'buyer' ? 'الاستفسارات' : 'الاستفسارات العامة'} {id ? `- #${id}` : ''}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {userType === 'buyer' 
+                ? 'قائمة الاستفسارات الواردة من الموردين للمناقصة. اجب عن الاستفسارات لتوضيح المتطلبات.'
+                : 'استفسارات وإجابات عامة من الموردين الآخرين حول هذه المناقصة'
+              }
+            </p>
           </div>
           <div className="flex items-center gap-3">
+            {userType === 'supplier' && (
+              <Link 
+                to={`/tender/${id}/chat`} 
+                className="px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600"
+              >
+                استفسار خاص
+              </Link>
+            )}
             <Link to={`/tender/${id ?? ''}`} className="px-3 py-2 border rounded">عودة للتفاصيل</Link>
           </div>
         </div>
@@ -80,17 +108,36 @@ export default function Quires() {
               </div>
             </div>
 
-            <div className="bg-white rounded shadow p-4">
-              <h5 className="text-right font-semibold">أجب على الاستفسار</h5>
-              <textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="أدخل إجابتك هنا" className="w-full mt-3 border rounded px-3 py-2" rows={4} />
-              <div className="flex items-center justify-between mt-3">
-                <div className="text-sm text-gray-500">سيتم إرسال الإجابة إلى المورد تلقائياً</div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setReply('')} className="px-4 py-2 border rounded">مسح</button>
-                  <button onClick={sendAnswer} className="px-4 py-2 bg-tawreed-green text-white rounded">إرسال الإجابة</button>
+            {userType === 'buyer' && (
+              <div className="bg-white rounded shadow p-4">
+                <h5 className="text-right font-semibold">أجب على الاستفسار</h5>
+                <textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="أدخل إجابتك هنا" className="w-full mt-3 border rounded px-3 py-2" rows={4} />
+                <div className="flex items-center justify-between mt-3">
+                  <div className="text-sm text-gray-500">سيتم إرسال الإجابة إلى المورد تلقائياً</div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setReply('')} className="px-4 py-2 border rounded">مسح</button>
+                    <button onClick={sendAnswer} className="px-4 py-2 bg-tawreed-green text-white rounded">إرسال الإجابة</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {userType === 'supplier' && (
+              <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium text-blue-900">معلومة</span>
+                </div>
+                <p className="text-sm text-blue-800 mr-8">
+                  هذه الاستفسارات والإجابات مرئية لجميع الموردين. للاستفسارات الخاصة، استخدم 
+                  <Link to={`/tender/${id}/chat`} className="underline mr-1 hover:text-blue-900">
+                    نظام المحادثة الخاص
+                  </Link>
+                </p>
+              </div>
+            )}
           </main>
         </div>
       </div>
