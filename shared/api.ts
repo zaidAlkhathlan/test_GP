@@ -149,6 +149,18 @@ export interface TenderEntity {
   sub_domains?: SubDomain[];
 }
 
+// Required file interface for dynamic file requirements
+export interface RequiredFile {
+  id?: number;
+  tender_id: number;
+  file_type: 'technical' | 'financial' | 'legal' | 'experience';
+  file_name: string;
+  description: string;
+  is_required: boolean;
+  max_size_mb?: number;
+  allowed_formats?: string;
+}
+
 // Frontend display interface (existing - for TenderCard component)
 export interface Tender {
   id: string;
@@ -167,4 +179,6 @@ export interface Tender {
   referenceNumber?: string;
   // Sub-domains this tender covers
   subDomains?: string[];
+  // Dynamic file requirements
+  requiredFiles?: RequiredFile[];
 }

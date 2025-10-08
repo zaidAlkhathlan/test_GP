@@ -249,6 +249,7 @@ export async function initDatabase() {
       file1_name            TEXT,
       file2_name            TEXT,
       expected_budget       REAL,
+      required_files        TEXT,
       FOREIGN KEY (buyer_id) REFERENCES Buyer(ID) ON DELETE CASCADE ON UPDATE CASCADE,
       FOREIGN KEY (domain_id) REFERENCES domains(ID) ON DELETE RESTRICT ON UPDATE CASCADE
     );
@@ -297,6 +298,68 @@ export async function initDatabase() {
   `;
 
   const createTenderCertificatesIndex = `CREATE INDEX IF NOT EXISTS idx_tc_certificate ON tender_certificates(certificate_id);`;
+
+  // Supplier Offers table
+  const createOffersTable = `
+    CREATE TABLE IF NOT EXISTS offers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_id INTEGER NOT NULL,
+      supplier_id INTEGER NOT NULL,
+      offer_value DECIMAL(15, 2) NOT NULL,
+      additional_notes TEXT,
+      status TEXT DEFAULT 'submitted' CHECK(status IN ('submitted', 'under_review', 'accepted', 'rejected', 'withdrawn')),
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tender_id) REFERENCES tender(id) ON DELETE CASCADE,
+      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID) ON DELETE CASCADE,
+      UNIQUE(tender_id, supplier_id)
+    );
+  `;
+
+  // Offer Files table for storing uploaded documents
+  const createOfferFilesTable = `
+    CREATE TABLE IF NOT EXISTS offer_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      offer_id INTEGER NOT NULL,
+      file_type TEXT NOT NULL CHECK(file_type IN ('technical', 'financial', 'company', 'additional')),
+      file_name TEXT NOT NULL,
+      file_data BLOB NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE
+    );
+  `;
+
+  // Indexes for offers and offer files
+  const createOfferIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_offers_tender ON offers(tender_id);
+    CREATE INDEX IF NOT EXISTS idx_offers_supplier ON offers(supplier_id);
+    CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
+    CREATE INDEX IF NOT EXISTS idx_offer_files_offer ON offer_files(offer_id);
+    CREATE INDEX IF NOT EXISTS idx_offer_files_type ON offer_files(file_type);
+  `;
+
+  // Tender Required Files table - What files buyers require from suppliers
+  const createTenderRequiredFilesTable = `
+    CREATE TABLE IF NOT EXISTS tender_required_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_id INTEGER NOT NULL,
+      file_type TEXT NOT NULL CHECK(file_type IN ('technical', 'financial', 'legal', 'experience', 'company', 'additional')),
+      file_name TEXT NOT NULL,
+      description TEXT,
+      is_required BOOLEAN DEFAULT 1,
+      max_size_mb INTEGER DEFAULT 10,
+      allowed_formats TEXT DEFAULT 'PDF,DOC,DOCX,JPG,PNG',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (tender_id) REFERENCES tender(id) ON DELETE CASCADE
+    );
+  `;
+
+  const createTenderRequiredFilesIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_trf_tender ON tender_required_files(tender_id);
+    CREATE INDEX IF NOT EXISTS idx_trf_type ON tender_required_files(file_type);
+  `;
 
   try {
     // Dynamically import sql.js to avoid bundler resolving it at config time
@@ -379,6 +442,15 @@ export async function initDatabase() {
     realDb.run(createTenderLicensesIndex);
     realDb.run(createTenderCertificatesTable);
     realDb.run(createTenderCertificatesIndex);
+    
+    // Create offer-related tables
+    realDb.run(createOffersTable);
+    realDb.run(createOfferFilesTable);
+    realDb.run(createOfferIndexes);
+    
+    // Create tender required files table
+    realDb.run(createTenderRequiredFilesTable);
+    realDb.run(createTenderRequiredFilesIndexes);
     
     // Save database to file
     const data = realDb.export();

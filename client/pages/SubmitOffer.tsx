@@ -1,31 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Header from '../components/Header';
+import { RequiredFile } from '@shared/api';
 
 interface FileUpload {
   id: string;
   name: string;
   file: File | null;
   required: boolean;
+  description?: string;
+  maxSize?: number;
+  allowedFormats?: string;
 }
 
 export default function SubmitOffer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [loadingRequirements, setLoadingRequirements] = useState(true);
   const [tenderTitle, setTenderTitle] = useState('');
   
   // Form state
   const [offerValue, setOfferValue] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
   
-  // File uploads state
-  const [files, setFiles] = useState<FileUpload[]>([
-    { id: 'technical', name: 'ملف العرض الفني (إجباري)', file: null, required: true },
-    { id: 'financial', name: 'ملف العرض المالي (إجباري)', file: null, required: true },
-    { id: 'company', name: 'ملف الشركة الاعتبارية', file: null, required: false },
-    { id: 'additional', name: 'ملفات أخرى اختيارية', file: null, required: false },
-  ]);
+  // File uploads state - will be populated dynamically from backend
+  const [files, setFiles] = useState<FileUpload[]>([]);
 
   useEffect(() => {
     // Check if supplier is logged in
@@ -35,11 +35,88 @@ export default function SubmitOffer() {
       return;
     }
 
-    // Fetch tender title (mock data for now)
-    setTenderTitle('بناء ورشة سيارات');
-  }, [navigate]);
+    // Fetch tender details and dynamic file requirements
+    fetchTenderRequirements();
+  }, [navigate, id]);
+
+  const fetchTenderRequirements = async () => {
+    if (!id) return;
+    
+    setLoadingRequirements(true);
+    try {
+      const response = await fetch(`/api/tenders/${id}`);
+      if (response.ok) {
+        const tenderData = await response.json();
+        
+        // Set tender title
+        setTenderTitle(tenderData.title || 'مناقصة');
+        
+        // Transform backend required files to frontend format
+        const dynamicFiles: FileUpload[] = [];
+        
+        if (tenderData.requiredFiles && tenderData.requiredFiles.length > 0) {
+          // Use dynamic file requirements from backend
+          dynamicFiles.push(...tenderData.requiredFiles.map((reqFile: RequiredFile) => ({
+            id: reqFile.file_type,
+            name: `${reqFile.file_name}${reqFile.is_required ? ' (إجباري)' : ' (اختياري)'}`,
+            file: null,
+            required: reqFile.is_required,
+            description: reqFile.description,
+            maxSize: reqFile.max_size_mb,
+            allowedFormats: reqFile.allowed_formats
+          })));
+        } else {
+          // Fallback to default file requirements if none specified by buyer
+          dynamicFiles.push(
+            { id: 'technical', name: 'ملف العرض الفني (إجباري)', file: null, required: true, description: 'الوثائق التقنية والمواصفات' },
+            { id: 'financial', name: 'ملف العرض المالي (إجباري)', file: null, required: true, description: 'العرض المالي وتفاصيل التكلفة' },
+            { id: 'legal', name: 'الوثائق القانونية (اختياري)', file: null, required: false, description: 'التراخيص والشهادات القانونية' },
+            { id: 'experience', name: 'ملف الخبرة (اختياري)', file: null, required: false, description: 'أمثلة على الأعمال السابقة والمراجع' }
+          );
+        }
+        
+        setFiles(dynamicFiles);
+      } else {
+        console.error('Failed to fetch tender requirements');
+        // Use fallback requirements
+        setFiles([
+          { id: 'technical', name: 'ملف العرض الفني (إجباري)', file: null, required: true, description: 'الوثائق التقنية والمواصفات' },
+          { id: 'financial', name: 'ملف العرض المالي (إجباري)', file: null, required: true, description: 'العرض المالي وتفاصيل التكلفة' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching tender requirements:', error);
+      // Use fallback requirements
+      setFiles([
+        { id: 'technical', name: 'ملف العرض الفني (إجباري)', file: null, required: true, description: 'الوثائق التقنية والمواصفات' },
+        { id: 'financial', name: 'ملف العرض المالي (إجباري)', file: null, required: true, description: 'العرض المالي وتفاصيل التكلفة' }
+      ]);
+    } finally {
+      setLoadingRequirements(false);
+    }
+  };
 
   const handleFileChange = (fileId: string, file: File | null) => {
+    if (file) {
+      const fileRequirement = files.find(f => f.id === fileId);
+      
+      // Check file size if specified
+      if (fileRequirement?.maxSize && file.size > fileRequirement.maxSize * 1024 * 1024) {
+        alert(`حجم الملف كبير جداً. الحد الأقصى هو ${fileRequirement.maxSize} ميجابايت`);
+        return;
+      }
+      
+      // Check file format if specified
+      if (fileRequirement?.allowedFormats) {
+        const allowedExtensions = fileRequirement.allowedFormats.split(',').map(ext => ext.trim().toLowerCase());
+        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+        if (!allowedExtensions.includes(fileExtension)) {
+          alert(`نوع الملف غير مدعوم. الأنواع المسموحة: ${fileRequirement.allowedFormats}`);
+          return;
+        }
+      }
+    }
+    
     setFiles(prev => prev.map(f => f.id === fileId ? { ...f, file } : f));
   };
 
@@ -60,17 +137,54 @@ export default function SubmitOffer() {
       return;
     }
 
+    // Get supplier data from localStorage
+    const supplierData = localStorage.getItem('supplier');
+    if (!supplierData) {
+      alert('يرجى تسجيل الدخول أولاً');
+      navigate('/supplier/signin');
+      return;
+    }
+
+    const supplier = JSON.parse(supplierData);
+
     setLoading(true);
     
     try {
-      // Here you would submit the form data to your backend
-      console.log('Submitting offer:', { offerValue, additionalNotes, files });
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('tender_id', id!);
+      formData.append('supplier_id', supplier.ID.toString());
+      formData.append('offer_value', offerValue);
+      formData.append('additional_notes', additionalNotes);
       
-      // Mock submission delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Add files to FormData
+      files.forEach((fileEntry) => {
+        if (fileEntry.file) {
+          // Use the file ID or name as the fieldname (backend will determine type)
+          const fieldName = fileEntry.id.toLowerCase().includes('technical') ? 'technical_file' :
+                           fileEntry.id.toLowerCase().includes('financial') ? 'financial_file' :
+                           fileEntry.id.toLowerCase().includes('company') ? 'company_file' :
+                           'additional_file';
+          formData.append(fieldName, fileEntry.file);
+        }
+      });
+
+      console.log('Submitting offer to API...');
       
-      alert('تم تقديم العرض بنجاح!');
-      navigate('/supplier/offers');
+      // Submit to backend API
+      const response = await fetch(`/api/tenders/${id}/offers`, {
+        method: 'POST',
+        body: formData // Don't set Content-Type header, let browser set it with boundary
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('تم تقديم العرض بنجاح!');
+        navigate('/supplier/offers');
+      } else {
+        throw new Error(result.message || 'فشل في تقديم العرض');
+      }
       
     } catch (error) {
       console.error('Error submitting offer:', error);
@@ -175,14 +289,34 @@ export default function SubmitOffer() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-6">المستندات المطلوبة</h3>
                 
-                <div className="space-y-6">
-                  {files.map((fileItem) => (
+                {loadingRequirements ? (
+                  <div className="space-y-4">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+                      <div className="h-20 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {files.map((fileItem) => (
                     <div key={fileItem.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-gray-900">
-                          {fileItem.name}
-                          {fileItem.required && <span className="text-red-500 mr-1">*</span>}
-                        </h4>
+                        <div>
+                          <h4 className="font-medium text-gray-900">
+                            {fileItem.name}
+                            {fileItem.required && <span className="text-red-500 mr-1">*</span>}
+                          </h4>
+                          {fileItem.description && (
+                            <p className="text-sm text-gray-600 mt-1">{fileItem.description}</p>
+                          )}
+                          {fileItem.maxSize && (
+                            <p className="text-xs text-gray-500 mt-1">الحد الأقصى: {fileItem.maxSize} ميجابايت</p>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -214,7 +348,7 @@ export default function SubmitOffer() {
                             type="file"
                             id={fileItem.id}
                             className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            accept={fileItem.allowedFormats || ".pdf,.doc,.docx,.jpg,.jpeg,.png"}
                             onChange={(e) => {
                               const file = e.target.files?.[0] || null;
                               handleFileChange(fileItem.id, file);
@@ -228,13 +362,16 @@ export default function SubmitOffer() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
                             <span className="text-sm text-gray-600">انقر لرفع الملف</span>
-                            <span className="text-xs text-gray-500">PDF, DOC, DOCX, JPG, PNG</span>
+                            <span className="text-xs text-gray-500">
+                              {fileItem.allowedFormats || "PDF, DOC, DOCX, JPG, PNG"}
+                            </span>
                           </label>
                         </div>
                       )}
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

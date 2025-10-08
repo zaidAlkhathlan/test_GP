@@ -131,10 +131,7 @@ export default function Quires() {
                   <span className="font-medium text-blue-900">معلومة</span>
                 </div>
                 <p className="text-sm text-blue-800 mr-8">
-                  هذه الاستفسارات والإجابات مرئية لجميع الموردين. للاستفسارات الخاصة، استخدم 
-                  <Link to={`/tender/${id}/chat`} className="underline mr-1 hover:text-blue-900">
-                    نظام المحادثة الخاص
-                  </Link>
+                  هذه الاستفسارات والإجابات مرئية لجميع الموردين. للاستفسارات الخاصة، استخدم نظام المحادثة الخاص.
                 </p>
               </div>
             )}

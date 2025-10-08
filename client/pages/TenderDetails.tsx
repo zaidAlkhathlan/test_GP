@@ -507,7 +507,7 @@ export default function TenderDetails() {
           </div>
 
           <div className="space-y-6">
-            {/* Required Files Section for Suppliers */}
+            {/* Required Files Section for Suppliers - Dynamic from Backend */}
             {userType === 'supplier' && (
               <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
                 <div className="flex items-center gap-3 mb-6">
@@ -519,59 +519,143 @@ export default function TenderDetails() {
                   <h5 className="font-semibold text-lg">الملفات المطلوب تقديمها</h5>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="p-4 border border-gray-200 rounded-lg bg-blue-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="font-medium text-blue-900">العرض الفني</span>
-                      <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full">مطلوب</span>
-                    </div>
-                    <p className="text-sm text-blue-800 mr-8">
-                      يجب أن يتضمن التفاصيل الفنية الكاملة للمشروع، الجدول الزمني للتنفيذ، والمواصفات التقنية المطلوبة
-                    </p>
-                  </div>
+                {tenderData.requiredFiles && tenderData.requiredFiles.length > 0 ? (
+                  <div className="space-y-4">
+                    {tenderData.requiredFiles.map((reqFile: any, index: number) => {
+                      const getFileTypeConfig = (fileType: string) => {
+                        switch (fileType) {
+                          case 'technical':
+                            return {
+                              bgColor: 'bg-blue-50',
+                              borderColor: 'border-blue-200',
+                              iconColor: 'text-blue-600',
+                              textColor: 'text-blue-800',
+                              badgeColor: 'bg-blue-200',
+                              icon: (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                              )
+                            };
+                          case 'financial':
+                            return {
+                              bgColor: 'bg-green-50',
+                              borderColor: 'border-green-200',
+                              iconColor: 'text-green-600',
+                              textColor: 'text-green-800',
+                              badgeColor: 'bg-green-200',
+                              icon: (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                </svg>
+                              )
+                            };
+                          case 'legal':
+                            return {
+                              bgColor: 'bg-purple-50',
+                              borderColor: 'border-purple-200',
+                              iconColor: 'text-purple-600',
+                              textColor: 'text-purple-800',
+                              badgeColor: 'bg-purple-200',
+                              icon: (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                              )
+                            };
+                          case 'experience':
+                            return {
+                              bgColor: 'bg-yellow-50',
+                              borderColor: 'border-yellow-200',
+                              iconColor: 'text-yellow-600',
+                              textColor: 'text-yellow-800',
+                              badgeColor: 'bg-yellow-200',
+                              icon: (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h2a1 1 0 011 1v2m-4 0h4" />
+                                </svg>
+                              )
+                            };
+                          default:
+                            return {
+                              bgColor: 'bg-gray-50',
+                              borderColor: 'border-gray-200',
+                              iconColor: 'text-gray-600',
+                              textColor: 'text-gray-800',
+                              badgeColor: 'bg-gray-200',
+                              icon: (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              )
+                            };
+                        }
+                      };
 
-                  <div className="p-4 border border-gray-200 rounded-lg bg-green-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                      </svg>
-                      <span className="font-medium text-green-900">العرض المالي</span>
-                      <span className="px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full">مطلوب</span>
-                    </div>
-                    <p className="text-sm text-green-800 mr-8">
-                      يتضمن التكلفة الإجمالية للمشروع، تفصيل الأسعار، وشروط الدفع المقترحة
-                    </p>
-                  </div>
+                      const config = getFileTypeConfig(reqFile.file_type);
 
-                  <div className="p-4 border border-gray-200 rounded-lg bg-purple-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                      <span className="font-medium text-purple-900">المستندات القانونية</span>
-                      <span className="px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">مطلوب</span>
-                    </div>
-                    <p className="text-sm text-purple-800 mr-8">
-                      السجل التجاري، شهادة الغرفة التجارية، والتراخيص المهنية ذات الصلة
-                    </p>
+                      return (
+                        <div key={reqFile.id || index} className={`p-4 border ${config.borderColor} rounded-lg ${config.bgColor}`}>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={config.iconColor}>
+                              {config.icon}
+                            </div>
+                            <span className={`font-medium ${config.textColor.replace('text-', 'text-').replace('-800', '-900')}`}>
+                              {reqFile.file_name}
+                            </span>
+                            <span className={`px-2 py-1 ${config.badgeColor} ${config.textColor} text-xs rounded-full`}>
+                              {reqFile.is_required ? 'مطلوب' : 'اختياري'}
+                            </span>
+                          </div>
+                          {reqFile.description && (
+                            <p className={`text-sm ${config.textColor} mr-8`}>
+                              {reqFile.description}
+                            </p>
+                          )}
+                          {reqFile.max_size_mb && (
+                            <p className={`text-xs ${config.textColor} mr-8 mt-1`}>
+                              الحد الأقصى للحجم: {reqFile.max_size_mb} ميجابايت
+                            </p>
+                          )}
+                          {reqFile.allowed_formats && (
+                            <p className={`text-xs ${config.textColor} mr-8 mt-1`}>
+                              الصيغ المسموحة: {reqFile.allowed_formats}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+                ) : (
+                  // Fallback to default file requirements if none specified by buyer
+                  <div className="space-y-4">
+                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                      <div className="flex items-center gap-3 mb-2">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="font-medium text-blue-900">العرض الفني</span>
+                        <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs rounded-full">مطلوب</span>
+                      </div>
+                      <p className="text-sm text-blue-800 mr-8">
+                        يجب أن يتضمن التفاصيل الفنية الكاملة للمشروع، الجدول الزمني للتنفيذ، والمواصفات التقنية المطلوبة
+                      </p>
+                    </div>
 
-                  <div className="p-4 border border-gray-200 rounded-lg bg-yellow-50">
-                    <div className="flex items-center gap-3 mb-2">
-                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8v-2a1 1 0 011-1h2a1 1 0 011 1v2m-4 0h4" />
-                      </svg>
-                      <span className="font-medium text-yellow-900">الخبرات السابقة</span>
-                      <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs rounded-full">اختياري</span>
+                    <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+                      <div className="flex items-center gap-3 mb-2">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                        <span className="font-medium text-green-900">العرض المالي</span>
+                        <span className="px-2 py-1 bg-green-200 text-green-800 text-xs rounded-full">مطلوب</span>
+                      </div>
+                      <p className="text-sm text-green-800 mr-8">
+                        يتضمن التكلفة الإجمالية للمشروع، تفصيل الأسعار، وشروط الدفع المقترحة
+                      </p>
                     </div>
-                    <p className="text-sm text-yellow-800 mr-8">
-                      نماذج من الأعمال السابقة المشابهة وشهادات العملاء السابقين
-                    </p>
                   </div>
-                </div>
+                )}
 
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -582,9 +666,7 @@ export default function TenderDetails() {
                   </div>
                 </div>
               </div>
-            )}
-
-            <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
+            )}            <div className="bg-white rounded-lg shadow-sm p-8" dir="rtl">
               <h5 className="font-semibold text-lg mb-4">ملفات المناقصة</h5>
               {tender.documents && tender.documents.length > 0 ? (
                 <div className="space-y-3">

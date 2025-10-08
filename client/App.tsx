@@ -24,6 +24,7 @@ import AvailableTenders from "./pages/AvailableTenders";
 import CompanyProfile from "./pages/CompanyProfile";
 import SubmitOffer from "./pages/SubmitOffer";
 import SupplierChat from "./pages/SupplierChat";
+import AppliedTenders from "./pages/AppliedTenders";
 
 const queryClient = new QueryClient();
 
@@ -51,7 +52,8 @@ const App = () => (
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />
           <Route path="/available-tenders" element={<AvailableTenders />} />
-          <Route path="/supplier/offers" element={<div className="p-8 text-center" dir="rtl">صفحة العروض قيد التطوير</div>} />
+          <Route path="/supplier/offers" element={<AppliedTenders />} />
+          <Route path="/supplier/applied-tenders" element={<AppliedTenders />} />
           <Route path="/supplier/expired" element={<div className="p-8 text-center" dir="rtl">صفحة المناقصات المنتهية قيد التطوير</div>} />
           <Route path="/about" element={<div className="p-8 text-center" dir="rtl">صفحة من نحن قيد التطوير</div>} />
           <Route path="/contact" element={<div className="p-8 text-center" dir="rtl">صفحة اتصل بنا قيد التطوير</div>} />

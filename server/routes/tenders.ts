@@ -131,52 +131,64 @@ export const getTenderById: RequestHandler = (req, res) => {
                     console.error("Error fetching tender certificates:", certErr);
                   }
                   
-                  // Create tender details with real data from database
-                  const tenderDetails = {
-                    ...row,
-                    // Only add description if project_description exists
-                    description: row.project_description || null,
-                    // No hardcoded technical requirements - will be added via database later
-                    technicalRequirements: null,
-                    // No hardcoded financial requirements - will be added via database later  
-                    financialRequirements: null,
-                    // Only add contact info if exists in database
-                    contactInfo: {
-                      email: row.coordinator_email || null,
-                      phone: row.coordinator_phone || null,
-                      address: row.city ? `${row.city}, المملكة العربية السعودية` : null
-                    },
-                    // Only include documents that actually exist
-                    documents: [
-                      row.file1_name && row.file1 ? {
-                        name: row.file1_name,
-                        url: `/api/tenders/${id}/file1`,
-                        size: 'متاح للتنزيل'
-                      } : null,
-                      row.file2_name && row.file2 ? {
-                        name: row.file2_name, 
-                        url: `/api/tenders/${id}/file2`,
-                        size: 'متاح للتنزيل'
-                      } : null
-                    ].filter(doc => doc !== null),
-                    // No sample activities - will get real activities from database
-                    activities: [],
-                    // No fake stats - will get real stats from database 
-                    stats: {
-                      offersCount: 0,
-                      inquiriesCount: 0,  
-                      viewsCount: 0
+                  // Get required files for this tender
+                  db.all(
+                    `SELECT * FROM tender_required_files WHERE tender_id = ? ORDER BY file_type, file_name`,
+                    [id],
+                    (filesErr, requiredFiles) => {
+                      if (filesErr) {
+                        console.error("Error fetching tender required files:", filesErr);
+                      }
+                      
+                      // Create tender details with real data from database
+                      const tenderDetails = {
+                        ...row,
+                        // Only add description if project_description exists
+                        description: row.project_description || null,
+                        // No hardcoded technical requirements - will be added via database later
+                        technicalRequirements: null,
+                        // No hardcoded financial requirements - will be added via database later  
+                        financialRequirements: null,
+                        // Only add contact info if exists in database
+                        contactInfo: {
+                          email: row.coordinator_email || null,
+                          phone: row.coordinator_phone || null,
+                          address: row.city ? `${row.city}, المملكة العربية السعودية` : null
+                        },
+                        // Only include documents that actually exist
+                        documents: [
+                          row.file1_name && row.file1 ? {
+                            name: row.file1_name,
+                            url: `/api/tenders/${id}/file1`,
+                            size: 'متاح للتنزيل'
+                          } : null,
+                          row.file2_name && row.file2 ? {
+                            name: row.file2_name, 
+                            url: `/api/tenders/${id}/file2`,
+                            size: 'متاح للتنزيل'
+                          } : null
+                        ].filter(doc => doc !== null),
+                        // No sample activities - will get real activities from database
+                        activities: [],
+                        // No fake stats - will get real stats from database 
+                        stats: {
+                          offersCount: 0,
+                          inquiriesCount: 0,  
+                          viewsCount: 0
+                        }
+                      };
+                      
+                      res.json({
+                        tender: tenderDetails,
+                        subDomains: subDomains || [],
+                        licenses: licenses || [],
+                        certificates: certificates || [],
+                        requiredFiles: requiredFiles || [],
+                        requiredLicenses: licenses || [], // For backward compatibility
+                        requiredCertificates: certificates || []
+                      });
                     }
-                  };
-                  
-                  res.json({
-                    tender: tenderDetails,
-                    subDomains: subDomains || [],
-                    licenses: licenses || [],
-                    certificates: certificates || [],
-                    requiredLicenses: licenses || [], // For backward compatibility
-                    requiredCertificates: certificates || []
-                  });
+                  );
                 }
               );
             }
@@ -219,7 +231,8 @@ export const createTender: RequestHandler = (req, res) => {
     coordinator_phone,
     expected_budget,
     required_licenses,
-    required_certificates
+    required_certificates,
+    required_files
   } = req.body;
 
   // Parse sub_domain_ids if it's a string (from FormData)
@@ -254,6 +267,18 @@ export const createTender: RequestHandler = (req, res) => {
         : required_certificates;
     } catch (e) {
       console.error("Invalid required_certificates format:", e);
+    }
+  }
+
+  // Parse required_files if it's a string (from FormData)
+  let parsedRequiredFiles = [];
+  if (required_files) {
+    try {
+      parsedRequiredFiles = typeof required_files === 'string' 
+        ? JSON.parse(required_files) 
+        : required_files;
+    } catch (e) {
+      console.error("Invalid required_files format:", e);
     }
   }
 
@@ -321,7 +346,9 @@ export const createTender: RequestHandler = (req, res) => {
               insertedLicenses, 
               totalLicenses, 
               insertedCertificates, 
-              totalCertificates
+              totalCertificates,
+              insertedRequiredFiles,
+              totalRequiredFiles
             });
             
             res.status(201).json({
@@ -339,9 +366,11 @@ export const createTender: RequestHandler = (req, res) => {
           let insertedSubDomains = 0;
           let insertedLicenses = 0;
           let insertedCertificates = 0;
+          let insertedRequiredFiles = 0;
           const totalSubDomains = parsedSubDomainIds.length;
           const totalLicenses = parsedRequiredLicenses.length;
           const totalCertificates = parsedRequiredCertificates.length;
+          const totalRequiredFiles = parsedRequiredFiles.length;
           
           // Insert tender-subdomain relationships
           if (totalSubDomains === 0) {
@@ -358,7 +387,7 @@ export const createTender: RequestHandler = (req, res) => {
                   }
                   
                   insertedSubDomains++;
-                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates && insertedRequiredFiles === totalRequiredFiles) {
                     completeTenderCreation();
                   }
                 }
@@ -370,7 +399,7 @@ export const createTender: RequestHandler = (req, res) => {
           if (totalLicenses === 0) {
             // No licenses to insert, check if we can complete
             insertedLicenses = totalLicenses;
-            if (insertedSubDomains === totalSubDomains && insertedCertificates === totalCertificates) {
+            if (insertedSubDomains === totalSubDomains && insertedCertificates === totalCertificates && insertedRequiredFiles === totalRequiredFiles) {
               completeTenderCreation();
             }
           } else {
@@ -402,7 +431,7 @@ export const createTender: RequestHandler = (req, res) => {
                   }
                   
                   insertedLicenses++;
-                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates && insertedRequiredFiles === totalRequiredFiles) {
                     completeTenderCreation();
                   }
                 }
@@ -414,7 +443,7 @@ export const createTender: RequestHandler = (req, res) => {
           if (totalCertificates === 0) {
             // No certificates to insert, check if we can complete
             insertedCertificates = totalCertificates;
-            if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses) {
+            if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedRequiredFiles === totalRequiredFiles) {
               completeTenderCreation();
             }
           } else {
@@ -446,7 +475,47 @@ export const createTender: RequestHandler = (req, res) => {
                   }
                   
                   insertedCertificates++;
-                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates && insertedRequiredFiles === totalRequiredFiles) {
+                    completeTenderCreation();
+                  }
+                }
+              );
+            });
+          }
+
+          // Insert tender required files
+          if (totalRequiredFiles === 0) {
+            // No required files to insert, check if we can complete
+            insertedRequiredFiles = totalRequiredFiles;
+            if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates) {
+              completeTenderCreation();
+            }
+          } else {
+            parsedRequiredFiles.forEach((fileReq: any) => {
+              console.log("Adding required file:", fileReq);
+              
+              db.run(
+                `INSERT INTO tender_required_files 
+                 (tender_id, file_type, file_name, description, is_required, max_size_mb, allowed_formats) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  tenderId,
+                  fileReq.file_type,
+                  fileReq.file_name || fileReq.name,
+                  fileReq.description || '',
+                  fileReq.is_required !== false ? 1 : 0,
+                  fileReq.max_size_mb || 10,
+                  fileReq.allowed_formats || 'PDF,DOC,DOCX,JPG,PNG'
+                ],
+                (fileErr) => {
+                  if (fileErr) {
+                    console.error("Error inserting tender required file:", fileErr);
+                  } else {
+                    console.log(`✅ Inserted required file: ${fileReq.file_name} for tender ${tenderId}`);
+                  }
+                  
+                  insertedRequiredFiles++;
+                  if (insertedSubDomains === totalSubDomains && insertedLicenses === totalLicenses && insertedCertificates === totalCertificates && insertedRequiredFiles === totalRequiredFiles) {
                     completeTenderCreation();
                   }
                 }

@@ -11,6 +11,7 @@ import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSu
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
+import { submitOfferWithFiles, getOffersByTender, getOffersBySupplier, getOfferFiles, downloadOfferFile } from './routes/offers';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 import { 
@@ -97,6 +98,13 @@ export function createServer() {
   app.put('/api/tenders/:id', updateTender);
   app.delete('/api/tenders/:id', deleteTender);
   app.get('/api/domains/:domainId/tenders', getTendersByDomain);
+  
+  // Offers routes
+  app.post('/api/tenders/:tenderId/offers', submitOfferWithFiles);
+  app.get('/api/tenders/:tenderId/offers', getOffersByTender);
+  app.get('/api/suppliers/:supplierId/offers', getOffersBySupplier);
+  app.get('/api/offers/:offerId/files', getOfferFiles);
+  app.get('/api/offers/files/:fileId/download', downloadOfferFile);
   
   // Inquiries routes
   app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
