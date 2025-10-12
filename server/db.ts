@@ -299,45 +299,40 @@ export async function initDatabase() {
 
   const createTenderCertificatesIndex = `CREATE INDEX IF NOT EXISTS idx_tc_certificate ON tender_certificates(certificate_id);`;
 
-  // Supplier Offers table
-  const createOffersTable = `
-    CREATE TABLE IF NOT EXISTS offers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      tender_id INTEGER NOT NULL,
-      supplier_id INTEGER NOT NULL,
-      offer_value DECIMAL(15, 2) NOT NULL,
-      additional_notes TEXT,
-      status TEXT DEFAULT 'submitted' CHECK(status IN ('submitted', 'under_review', 'accepted', 'rejected', 'withdrawn')),
-      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (tender_id) REFERENCES tender(id) ON DELETE CASCADE,
-      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID) ON DELETE CASCADE,
-      UNIQUE(tender_id, supplier_id)
+  // Proposal table (replacing offers and offer_files)
+  const createProposalTable = `
+    CREATE TABLE IF NOT EXISTS Proposal (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference_number  INTEGER,
+      proposal_price    NUMERIC,
+      created_at        TEXT DEFAULT (datetime('now')),
+      company_name      TEXT,
+      project_description TEXT,
+
+      -- Files (store as BLOBs or switch to file paths/URLs if using external storage)
+      financial_file    BLOB,
+      technical_file    BLOB,
+      company_file      BLOB,
+      extra_file        BLOB,
+      extra_description TEXT,
+
+      -- Relationships
+      tender_id         INTEGER NOT NULL,
+      supplier_id       INTEGER NOT NULL,
+
+      -- FKs (SQLite honors these only if PRAGMA foreign_keys=ON)
+      FOREIGN KEY (tender_id)  REFERENCES tender(id)   ON DELETE CASCADE  ON UPDATE CASCADE,
+      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
+
+      -- Business rule: one proposal per supplier per tender
+      UNIQUE (supplier_id, tender_id)
     );
   `;
 
-  // Offer Files table for storing uploaded documents
-  const createOfferFilesTable = `
-    CREATE TABLE IF NOT EXISTS offer_files (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      offer_id INTEGER NOT NULL,
-      file_type TEXT NOT NULL CHECK(file_type IN ('technical', 'financial', 'company', 'additional')),
-      file_name TEXT NOT NULL,
-      file_data BLOB NOT NULL,
-      file_size INTEGER NOT NULL,
-      mime_type TEXT,
-      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE
-    );
-  `;
-
-  // Indexes for offers and offer files
-  const createOfferIndexes = `
-    CREATE INDEX IF NOT EXISTS idx_offers_tender ON offers(tender_id);
-    CREATE INDEX IF NOT EXISTS idx_offers_supplier ON offers(supplier_id);
-    CREATE INDEX IF NOT EXISTS idx_offers_status ON offers(status);
-    CREATE INDEX IF NOT EXISTS idx_offer_files_offer ON offer_files(offer_id);
-    CREATE INDEX IF NOT EXISTS idx_offer_files_type ON offer_files(file_type);
+  // Proposal table indexes
+  const createProposalIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_proposal_tender   ON Proposal(tender_id);
+    CREATE INDEX IF NOT EXISTS idx_proposal_supplier ON Proposal(supplier_id);
   `;
 
   // Tender Required Files table - What files buyers require from suppliers
@@ -443,10 +438,9 @@ export async function initDatabase() {
     realDb.run(createTenderCertificatesTable);
     realDb.run(createTenderCertificatesIndex);
     
-    // Create offer-related tables
-    realDb.run(createOffersTable);
-    realDb.run(createOfferFilesTable);
-    realDb.run(createOfferIndexes);
+    // Create proposal table (replacing offers)
+    realDb.run(createProposalTable);
+    realDb.run(createProposalIndexes);
     
     // Create tender required files table
     realDb.run(createTenderRequiredFilesTable);

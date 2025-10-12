@@ -292,6 +292,8 @@ export const createTender: RequestHandler = (req, res) => {
   console.log("📝 Creating tender:", { buyer_id, title, domain_id, sub_domain_ids: parsedSubDomainIds });
   console.log("📝 Files:", { file1Name, file2Name, file1Size: file1Data?.length, file2Size: file2Data?.length });
 
+  let responseSent = false; // Flag to prevent multiple responses
+
   // Validate required fields
   if (!buyer_id || !title || !domain_id || !parsedSubDomainIds || parsedSubDomainIds.length === 0) {
     res.status(400).json({ 
@@ -307,7 +309,10 @@ export const createTender: RequestHandler = (req, res) => {
     (err, result) => {
       if (err) {
         console.error("Error getting max reference number:", err);
-        res.status(500).json({ error: "Failed to create tender" });
+        if (!responseSent) {
+          responseSent = true;
+          res.status(500).json({ error: "Failed to create tender" });
+        }
         return;
       }
 
@@ -330,15 +335,34 @@ export const createTender: RequestHandler = (req, res) => {
         function(err) {
           if (err) {
             console.error("Error inserting tender:", err);
-            res.status(500).json({ error: "Failed to create tender" });
+            if (!responseSent) {
+              responseSent = true;
+              res.status(500).json({ error: "Failed to create tender" });
+            }
             return;
           }
 
           const tenderId = this.lastID;
           console.log("✅ Tender created with ID:", tenderId);
           
+          // Track insertions
+          let insertedSubDomains = 0;
+          let insertedLicenses = 0;
+          let insertedCertificates = 0;
+          let insertedRequiredFiles = 0;
+          const totalSubDomains = parsedSubDomainIds.length;
+          const totalLicenses = parsedRequiredLicenses.length;
+          const totalCertificates = parsedRequiredCertificates.length;
+          const totalRequiredFiles = parsedRequiredFiles.length;
+
           // Function to complete tender creation after all relationships are inserted
           const completeTenderCreation = () => {
+            // Prevent multiple responses
+            if (responseSent) {
+              console.log("⚠️ Response already sent, skipping completion");
+              return;
+            }
+
             console.log("✅ Tender creation completed:", {
               tenderId, 
               insertedSubDomains, 
@@ -351,6 +375,7 @@ export const createTender: RequestHandler = (req, res) => {
               totalRequiredFiles
             });
             
+            responseSent = true;
             res.status(201).json({
               success: true,
               tender: {
@@ -361,16 +386,6 @@ export const createTender: RequestHandler = (req, res) => {
               }
             });
           };
-
-          // Track insertions
-          let insertedSubDomains = 0;
-          let insertedLicenses = 0;
-          let insertedCertificates = 0;
-          let insertedRequiredFiles = 0;
-          const totalSubDomains = parsedSubDomainIds.length;
-          const totalLicenses = parsedRequiredLicenses.length;
-          const totalCertificates = parsedRequiredCertificates.length;
-          const totalRequiredFiles = parsedRequiredFiles.length;
           
           // Insert tender-subdomain relationships
           if (totalSubDomains === 0) {

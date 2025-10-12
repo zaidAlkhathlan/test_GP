@@ -154,8 +154,9 @@ export default function SubmitOffer() {
       const formData = new FormData();
       formData.append('tender_id', id!);
       formData.append('supplier_id', supplier.ID.toString());
-      formData.append('offer_value', offerValue);
-      formData.append('additional_notes', additionalNotes);
+      formData.append('proposal_price', offerValue);
+      formData.append('project_description', additionalNotes);
+      formData.append('company_name', supplier.company_name || '');
       
       // Add files to FormData
       files.forEach((fileEntry) => {
@@ -169,10 +170,10 @@ export default function SubmitOffer() {
         }
       });
 
-      console.log('Submitting offer to API...');
+      console.log('Submitting proposal to API...');
       
-      // Submit to backend API
-      const response = await fetch(`/api/tenders/${id}/offers`, {
+      // Submit to backend API (updated to proposals endpoint)
+      const response = await fetch(`/api/tenders/${id}/proposals`, {
         method: 'POST',
         body: formData // Don't set Content-Type header, let browser set it with boundary
       });

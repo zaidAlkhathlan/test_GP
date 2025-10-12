@@ -373,8 +373,8 @@ export default function AppliedTenders() {
         return;
       }
 
-      // Fetch offers from backend API
-      const response = await fetch(`/api/suppliers/${supplierId}/offers`);
+      // Fetch proposals from backend API (updated from offers)
+      const response = await fetch(`/api/suppliers/${supplierId}/proposals`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
