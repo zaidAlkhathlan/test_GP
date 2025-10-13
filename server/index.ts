@@ -4,14 +4,14 @@ import cors from "cors";
 import multer from "multer";
 import { handleDemo } from "./routes/demo";
 import { initDatabase } from "./db";
-import { createBuyer } from "./routes/buyers";
+import { createBuyer, updateBuyer } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
 import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
-import { submitProposalWithFiles, getProposalsForTender, getProposalsForSupplier, downloadProposalFile, getProposalById } from './routes/proposals';
+import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier, downloadProposalFile, getProposalDetails } from './routes/proposals';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 import { 
@@ -23,6 +23,10 @@ import {
   removeBuyerLicense,
   addBuyerCertificate,
   removeBuyerCertificate,
+  addSupplierLicense,
+  removeSupplierLicense,
+  addSupplierCertificate,
+  removeSupplierCertificate,
   getAllAvailableLicenses,
   getAllAvailableCertificates
 } from './routes/company-profile';
@@ -71,6 +75,7 @@ export function createServer() {
   
   // Mount routes first, initialize DB in background
   app.post("/api/buyers", createBuyer);
+  app.put("/api/buyers/:id", updateBuyer);
   app.post("/api/auth/login", loginBuyer);
   app.post("/api/auth/supplier/login", loginSupplier);
   
@@ -99,12 +104,12 @@ export function createServer() {
   app.delete('/api/tenders/:id', deleteTender);
   app.get('/api/domains/:domainId/tenders', getTendersByDomain);
   
-  // Proposals routes (replacing offers)
+  // Proposals routes
   app.post('/api/tenders/:tenderId/proposals', submitProposalWithFiles);
   app.get('/api/tenders/:tenderId/proposals', getProposalsForTender);
-  app.get('/api/suppliers/:supplierId/proposals', getProposalsForSupplier);
-  app.get('/api/proposals/:proposalId', getProposalById);
-  app.get('/api/proposals/:proposalId/files/:fileType/download', downloadProposalFile);
+  app.get('/api/suppliers/:supplierId/proposals', getProposalsBySupplier);
+  app.get('/api/proposals/:proposalId', getProposalDetails);
+  app.get('/api/proposals/:proposalId/files/:fileType', downloadProposalFile);
   
   // Inquiries routes
   app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
@@ -125,11 +130,17 @@ export function createServer() {
   app.get('/api/suppliers/:id/licenses', getSupplierLicenses);
   app.get('/api/suppliers/:id/certificates', getSupplierCertificates);
   
-  // Add/remove licenses and certificates
+  // Add/remove licenses and certificates for buyers
   app.post('/api/buyers/:id/licenses', addBuyerLicense);
   app.delete('/api/buyers/:id/licenses/:licenseId', removeBuyerLicense);
   app.post('/api/buyers/:id/certificates', addBuyerCertificate);
   app.delete('/api/buyers/:id/certificates/:certificateId', removeBuyerCertificate);
+  
+  // Add/remove licenses and certificates for suppliers
+  app.post('/api/suppliers/:id/licenses', addSupplierLicense);
+  app.delete('/api/suppliers/:id/licenses/:licenseId', removeSupplierLicense);
+  app.post('/api/suppliers/:id/certificates', addSupplierCertificate);
+  app.delete('/api/suppliers/:id/certificates/:certificateId', removeSupplierCertificate);
   
   // Get all available licenses and certificates for selection
   app.get('/api/available-licenses', getAllAvailableLicenses);

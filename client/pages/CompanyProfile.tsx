@@ -30,6 +30,10 @@ interface Certificate {
 
 export default function CompanyProfile() {
   const [companyData, setCompanyData] = useState<CompanyProfile | null>(null);
+  const [editableData, setEditableData] = useState<Partial<CompanyProfile>>({});
+  const [companyDescription, setCompanyDescription] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<'buyer' | 'supplier'>('buyer');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -51,10 +55,16 @@ export default function CompanyProfile() {
     
     if (buyerData) {
       setUserType('buyer');
-      setCompanyData(JSON.parse(buyerData));
+      const data = JSON.parse(buyerData);
+      setCompanyData(data);
+      setEditableData(data);
+      setCompanyDescription(data.industry || '');
     } else if (supplierData) {
       setUserType('supplier');
-      setCompanyData(JSON.parse(supplierData));
+      const data = JSON.parse(supplierData);
+      setCompanyData(data);
+      setEditableData(data);
+      setCompanyDescription(data.industry || '');
     }
     
     setLoading(false);
@@ -220,6 +230,48 @@ export default function CompanyProfile() {
     }
   };
 
+  // Save company profile changes
+  const saveProfileChanges = async () => {
+    if (!companyData) return;
+
+    setIsSaving(true);
+    try {
+      const endpoint = userType === 'buyer' ? 'buyers' : 'suppliers';
+      const dataToUpdate = {
+        ...editableData,
+        industry: companyDescription || companyData.industry
+      };
+
+      const response = await fetch(`/api/${endpoint}/${companyData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToUpdate)
+      });
+
+      if (response.ok) {
+        const updatedData = await response.json();
+        // Update local storage and state
+        if (userType === 'buyer') {
+          localStorage.setItem('currentBuyer', JSON.stringify(updatedData));
+        } else {
+          localStorage.setItem('currentSupplier', JSON.stringify(updatedData));
+        }
+        setCompanyData(updatedData);
+        setEditableData({});
+        setIsEditing(false);
+        alert('تم حفظ التغييرات بنجاح!');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'فشل في حفظ التغييرات');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('حدث خطأ أثناء حفظ التغييرات');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Fetch licenses and certificates when companyData is available
   useEffect(() => {
     if (companyData) {
@@ -275,8 +327,11 @@ export default function CompanyProfile() {
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">الملف الشخصي</h1>
-            <button className="px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
-              تعديل الملف الشخصي
+            <button 
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              {isEditing ? 'إلغاء التعديل' : 'تعديل الملف الشخصي'}
             </button>
           </div>
           <p className="text-gray-600">بإمكانك إدارة ملفك الشخصي من خلال هذه الصفحة</p>
@@ -330,16 +385,34 @@ export default function CompanyProfile() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">اسم المؤسسة التجارية</label>
-                <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
-                  {companyData.company_name}
-                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editableData.company_name || ''}
+                    onChange={(e) => setEditableData(prev => ({ ...prev, company_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green"
+                  />
+                ) : (
+                  <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
+                    {companyData.company_name}
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">مختار تواصل</label>
-                <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
-                  {companyData.account_name}
-                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editableData.account_name || ''}
+                    onChange={(e) => setEditableData(prev => ({ ...prev, account_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green"
+                  />
+                ) : (
+                  <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
+                    {companyData.account_name}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -351,19 +424,37 @@ export default function CompanyProfile() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">الموقع</label>
-                <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19S6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6Z" />
-                  </svg>
-                  {companyData.city}
-                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editableData.city || ''}
+                    onChange={(e) => setEditableData(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green"
+                  />
+                ) : (
+                  <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19S6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6Z" />
+                    </svg>
+                    {companyData.city}
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">رقم جوال المؤسسة</label>
-                <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
-                  {companyData.commercial_phone_number}
-                </div>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editableData.commercial_phone_number || ''}
+                    onChange={(e) => setEditableData(prev => ({ ...prev, commercial_phone_number: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green"
+                  />
+                ) : (
+                  <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900">
+                    {companyData.commercial_phone_number}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -376,7 +467,14 @@ export default function CompanyProfile() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">وصف نشاط المؤسسة</label>
                 <textarea 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green h-24 resize-none"
+                  value={companyDescription}
+                  onChange={(e) => setCompanyDescription(e.target.value)}
+                  disabled={!isEditing}
+                  className={`w-full px-3 py-2 rounded-lg h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tawreed-green ${
+                    isEditing 
+                      ? 'border border-gray-300' 
+                      : 'bg-gray-50 border-none text-gray-900'
+                  }`}
                   placeholder="اكتب محاور وخبرات ونماذج الأعمال والأنشطة الرئيسية التي يمكن أن تكون في المؤسسة"
                 />
               </div>
@@ -527,8 +625,16 @@ export default function CompanyProfile() {
 
         {/* Action Buttons */}
         <div className="flex gap-4 mt-8">
-          <button className="px-6 py-3 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors">
-            حفظ التغييرات
+          <button 
+            onClick={saveProfileChanges}
+            disabled={isSaving || !isEditing}
+            className={`px-6 py-3 rounded-lg transition-colors ${
+              isSaving || !isEditing 
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                : 'bg-tawreed-green text-white hover:bg-green-600'
+            }`}
+          >
+            {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
           </button>
           <Link 
             to={userType === 'buyer' ? '/buyer/home' : '/supplier/home'} 

@@ -161,66 +161,6 @@ export interface RequiredFile {
   allowed_formats?: string;
 }
 
-// Proposal interfaces (replacing offers)
-export interface ProposalEntity {
-  id?: number;
-  reference_number?: number;
-  proposal_price: number;
-  created_at?: string;
-  company_name?: string;
-  project_description?: string;
-  financial_file?: Buffer | null;
-  technical_file?: Buffer | null;
-  company_file?: Buffer | null;
-  extra_file?: Buffer | null;
-  extra_description?: string;
-  tender_id: number;
-  supplier_id: number;
-}
-
-export interface ProposalResponse {
-  id: number;
-  reference_number?: number;
-  proposal_price: number;
-  created_at: string;
-  company_name?: string;
-  project_description?: string;
-  extra_description?: string;
-  tender_id: number;
-  supplier_id: number;
-  has_financial_file: boolean;
-  has_technical_file: boolean;
-  has_company_file: boolean;
-  has_extra_file: boolean;
-  supplier_company_name?: string;
-  supplier_email?: string;
-  tender_title?: string;
-  tender_reference?: number;
-}
-
-export interface SubmitProposalRequest {
-  tender_id: number;
-  supplier_id: number;
-  proposal_price: number;
-  project_description?: string;
-  extra_description?: string;
-  reference_number?: number;
-  company_name?: string;
-}
-
-export interface ProposalSubmissionResponse {
-  success: boolean;
-  message: string;
-  proposal?: {
-    id: number;
-    tender_id: number;
-    supplier_id: number;
-    proposal_price: number;
-    reference_number?: number;
-    created_at: string;
-  };
-}
-
 // Frontend display interface (existing - for TenderCard component)
 export interface Tender {
   id: string;

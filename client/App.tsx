@@ -22,7 +22,7 @@ import SupplierSignIn from "./pages/SupplierSignIn";
 import SupplierHome from "./pages/SupplierHome";
 import AvailableTenders from "./pages/AvailableTenders";
 import CompanyProfile from "./pages/CompanyProfile";
-import SubmitOffer from "./pages/SubmitOffer";
+import SubmitProposal from "./pages/SubmitProposal";
 import SupplierChat from "./pages/SupplierChat";
 import AppliedTenders from "./pages/AppliedTenders";
 
@@ -47,7 +47,7 @@ const App = () => (
           <Route path="/tender/:id" element={<TenderDetails />} />
           <Route path="/tender/:id/offers" element={<TenderOffers />} />
           <Route path="/tender/:id/chat" element={<SupplierChat />} />
-          <Route path="/tender/:id/submit-offer" element={<SubmitOffer />} />
+          <Route path="/tender/:id/submit-offer" element={<SubmitProposal />} />
           <Route path="/tender/:id/award/:offerId" element={<AwardedSupplier />} />
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />

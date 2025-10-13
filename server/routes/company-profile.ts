@@ -45,105 +45,57 @@ export const getBuyerCertificates: RequestHandler = (req, res) => {
   });
 };
 
-// Get supplier licenses (from JSON field)
+// Get supplier licenses (from relational tables)
 export const getSupplierLicenses: RequestHandler = (req, res) => {
   const { id } = req.params;
 
-  const statement = `SELECT licenses FROM Supplier WHERE id = ?`;
+  const statement = `
+    SELECT 
+      l.ID as id, 
+      l.Name as name, 
+      l.name_ar, 
+      l.name_en, 
+      l.description_ar, 
+      l.description_en, 
+      l.category,
+      l.code
+    FROM Supplier_Licenses sl
+    JOIN Licenses l ON sl.license_id = l.ID
+    WHERE sl.supplier_id = ?
+  `;
   
-  db.get(statement, [id], (err, result: { licenses?: string } | undefined) => {
+  db.all(statement, [id], (err, licenses) => {
     if (err) {
-      console.error('❌ Error fetching supplier:', err);
+      console.error('❌ Error fetching supplier licenses:', err);
       return res.status(500).json({ error: 'Failed to fetch supplier licenses' });
     }
 
-    if (!result) {
-      return res.status(404).json({ error: 'Supplier not found' });
-    }
-
-    if (!result.licenses) {
-      return res.json([]);
-    }
-
-    try {
-      // Parse the JSON string to get license IDs
-      const licenseIds = JSON.parse(result.licenses);
-      
-      if (!Array.isArray(licenseIds) || licenseIds.length === 0) {
-        return res.json([]);
-      }
-
-      const placeholders = licenseIds.map(() => '?').join(',');
-      const licenseStatement = `
-        SELECT ID as id, Name as name, name_ar, name_en, description_ar, description_en, category
-        FROM Licenses 
-        WHERE ID IN (${placeholders})
-      `;
-      
-      db.all(licenseStatement, licenseIds, (licenseErr, licenses) => {
-        if (licenseErr) {
-          console.error('❌ Error fetching licenses:', licenseErr);
-          return res.status(500).json({ error: 'Failed to fetch supplier licenses' });
-        }
-
-        console.log(`✅ Found ${licenses?.length || 0} licenses for supplier ${id}`);
-        res.json(licenses || []);
-      });
-    } catch (parseError) {
-      console.error('Error parsing supplier licenses JSON:', parseError);
-      res.json([]);
-    }
+    console.log(`✅ Found ${licenses?.length || 0} licenses for supplier ${id}`);
+    res.json(licenses || []);
   });
 };
 
-// Get supplier certificates (from JSON field)
+// Get supplier certificates (from relational tables)
 export const getSupplierCertificates: RequestHandler = (req, res) => {
   const { id } = req.params;
 
-  const statement = `SELECT certificates FROM Supplier WHERE id = ?`;
+  const statement = `
+    SELECT 
+      c.ID as id, 
+      c.Name as name
+    FROM Supplier_Certificates sc
+    JOIN Certificates c ON sc.certificate_id = c.ID
+    WHERE sc.supplier_id = ?
+  `;
   
-  db.get(statement, [id], (err, result: { certificates?: string } | undefined) => {
+  db.all(statement, [id], (err, certificates) => {
     if (err) {
-      console.error('❌ Error fetching supplier:', err);
+      console.error('❌ Error fetching supplier certificates:', err);
       return res.status(500).json({ error: 'Failed to fetch supplier certificates' });
     }
 
-    if (!result) {
-      return res.status(404).json({ error: 'Supplier not found' });
-    }
-
-    if (!result.certificates) {
-      return res.json([]);
-    }
-
-    try {
-      // Parse the JSON string to get certificate IDs
-      const certificateIds = JSON.parse(result.certificates);
-      
-      if (!Array.isArray(certificateIds) || certificateIds.length === 0) {
-        return res.json([]);
-      }
-
-      const placeholders = certificateIds.map(() => '?').join(',');
-      const certificateStatement = `
-        SELECT ID as id, Name as name
-        FROM Certificates 
-        WHERE ID IN (${placeholders})
-      `;
-      
-      db.all(certificateStatement, certificateIds, (certificateErr, certificates) => {
-        if (certificateErr) {
-          console.error('❌ Error fetching certificates:', certificateErr);
-          return res.status(500).json({ error: 'Failed to fetch supplier certificates' });
-        }
-
-        console.log(`✅ Found ${certificates?.length || 0} certificates for supplier ${id}`);
-        res.json(certificates || []);
-      });
-    } catch (parseError) {
-      console.error('Error parsing supplier certificates JSON:', parseError);
-      res.json([]);
-    }
+    console.log(`✅ Found ${certificates?.length || 0} certificates for supplier ${id}`);
+    res.json(certificates || []);
   });
 };
 
@@ -274,5 +226,107 @@ export const getAllAvailableCertificates: RequestHandler = (req, res) => {
     }
 
     res.json(certificates || []);
+  });
+};
+
+// Add license to supplier
+export const addSupplierLicense: RequestHandler = (req, res) => {
+  const { id } = req.params;
+  const { licenseId } = req.body;
+
+  if (!licenseId) {
+    return res.status(400).json({ error: 'License ID is required' });
+  }
+
+  // Check if relationship already exists
+  const checkStatement = `SELECT 1 FROM Supplier_Licenses WHERE supplier_id = ? AND license_id = ?`;
+  db.get(checkStatement, [id, licenseId], (err, existing) => {
+    if (err) {
+      console.error('❌ Error checking existing license:', err);
+      return res.status(500).json({ error: 'Failed to check existing license' });
+    }
+
+    if (existing) {
+      return res.status(409).json({ error: 'License already added to this supplier' });
+    }
+
+    // Add the license
+    const insertStatement = `INSERT INTO Supplier_Licenses (supplier_id, license_id) VALUES (?, ?)`;
+    db.run(insertStatement, [id, licenseId], function(insertErr) {
+      if (insertErr) {
+        console.error('❌ Error adding supplier license:', insertErr);
+        return res.status(500).json({ error: 'Failed to add license' });
+      }
+
+      console.log(`✅ Added license ${licenseId} to supplier ${id}`);
+      res.json({ success: true, message: 'License added successfully' });
+    });
+  });
+};
+
+// Remove license from supplier
+export const removeSupplierLicense: RequestHandler = (req, res) => {
+  const { id, licenseId } = req.params;
+
+  const deleteStatement = `DELETE FROM Supplier_Licenses WHERE supplier_id = ? AND license_id = ?`;
+  db.run(deleteStatement, [id, licenseId], function(err) {
+    if (err) {
+      console.error('❌ Error removing supplier license:', err);
+      return res.status(500).json({ error: 'Failed to remove license' });
+    }
+
+    console.log(`✅ Removed license ${licenseId} from supplier ${id}`);
+    res.json({ success: true, message: 'License removed successfully' });
+  });
+};
+
+// Add certificate to supplier
+export const addSupplierCertificate: RequestHandler = (req, res) => {
+  const { id } = req.params;
+  const { certificateId } = req.body;
+
+  if (!certificateId) {
+    return res.status(400).json({ error: 'Certificate ID is required' });
+  }
+
+  // Check if relationship already exists
+  const checkStatement = `SELECT 1 FROM Supplier_Certificates WHERE supplier_id = ? AND certificate_id = ?`;
+  db.get(checkStatement, [id, certificateId], (err, existing) => {
+    if (err) {
+      console.error('❌ Error checking existing certificate:', err);
+      return res.status(500).json({ error: 'Failed to check existing certificate' });
+    }
+
+    if (existing) {
+      return res.status(409).json({ error: 'Certificate already added to this supplier' });
+    }
+
+    // Add the certificate
+    const insertStatement = `INSERT INTO Supplier_Certificates (supplier_id, certificate_id) VALUES (?, ?)`;
+    db.run(insertStatement, [id, certificateId], function(insertErr) {
+      if (insertErr) {
+        console.error('❌ Error adding supplier certificate:', insertErr);
+        return res.status(500).json({ error: 'Failed to add certificate' });
+      }
+
+      console.log(`✅ Added certificate ${certificateId} to supplier ${id}`);
+      res.json({ success: true, message: 'Certificate added successfully' });
+    });
+  });
+};
+
+// Remove certificate from supplier
+export const removeSupplierCertificate: RequestHandler = (req, res) => {
+  const { id, certificateId } = req.params;
+
+  const deleteStatement = `DELETE FROM Supplier_Certificates WHERE supplier_id = ? AND certificate_id = ?`;
+  db.run(deleteStatement, [id, certificateId], function(err) {
+    if (err) {
+      console.error('❌ Error removing supplier certificate:', err);
+      return res.status(500).json({ error: 'Failed to remove certificate' });
+    }
+
+    console.log(`✅ Removed certificate ${certificateId} from supplier ${id}`);
+    res.json({ success: true, message: 'Certificate removed successfully' });
   });
 };

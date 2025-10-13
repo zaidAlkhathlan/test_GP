@@ -299,41 +299,7 @@ export async function initDatabase() {
 
   const createTenderCertificatesIndex = `CREATE INDEX IF NOT EXISTS idx_tc_certificate ON tender_certificates(certificate_id);`;
 
-  // Proposal table (replacing offers and offer_files)
-  const createProposalTable = `
-    CREATE TABLE IF NOT EXISTS Proposal (
-      id                INTEGER PRIMARY KEY AUTOINCREMENT,
-      reference_number  INTEGER,
-      proposal_price    NUMERIC,
-      created_at        TEXT DEFAULT (datetime('now')),
-      company_name      TEXT,
-      project_description TEXT,
 
-      -- Files (store as BLOBs or switch to file paths/URLs if using external storage)
-      financial_file    BLOB,
-      technical_file    BLOB,
-      company_file      BLOB,
-      extra_file        BLOB,
-      extra_description TEXT,
-
-      -- Relationships
-      tender_id         INTEGER NOT NULL,
-      supplier_id       INTEGER NOT NULL,
-
-      -- FKs (SQLite honors these only if PRAGMA foreign_keys=ON)
-      FOREIGN KEY (tender_id)  REFERENCES tender(id)   ON DELETE CASCADE  ON UPDATE CASCADE,
-      FOREIGN KEY (supplier_id) REFERENCES Supplier(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
-
-      -- Business rule: one proposal per supplier per tender
-      UNIQUE (supplier_id, tender_id)
-    );
-  `;
-
-  // Proposal table indexes
-  const createProposalIndexes = `
-    CREATE INDEX IF NOT EXISTS idx_proposal_tender   ON Proposal(tender_id);
-    CREATE INDEX IF NOT EXISTS idx_proposal_supplier ON Proposal(supplier_id);
-  `;
 
   // Tender Required Files table - What files buyers require from suppliers
   const createTenderRequiredFilesTable = `
@@ -437,10 +403,6 @@ export async function initDatabase() {
     realDb.run(createTenderLicensesIndex);
     realDb.run(createTenderCertificatesTable);
     realDb.run(createTenderCertificatesIndex);
-    
-    // Create proposal table (replacing offers)
-    realDb.run(createProposalTable);
-    realDb.run(createProposalIndexes);
     
     // Create tender required files table
     realDb.run(createTenderRequiredFilesTable);

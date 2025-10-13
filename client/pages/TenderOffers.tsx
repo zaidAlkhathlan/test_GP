@@ -1,76 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
+
+interface Proposal {
+  id: number;
+  reference_number: number;
+  proposal_price: number;
+  created_at: string;
+  company_name: string;
+  project_description: string;
+  extra_description: string;
+  tender_id: number;
+  supplier_id: number;
+  supplier_company_name: string;
+  supplier_email: string;
+  supplier_account_name: string;
+  supplier_commercial_record: string;
+  supplier_phone: string;
+  supplier_account_phone: string;
+  supplier_city: string;
+  supplier_domain_name: string;
+  licenses: string[];
+  certificates: string[];
+}
 
 export default function TenderOffers() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [modalSupplier, setModalSupplier] = useState<any | null>(null);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tenderInfo, setTenderInfo] = useState<any>(null);
 
-  // sample offers data
-  const offers = [
-    {
-      id: 'o1',
-      company: 'شركة البناء الحديثة المحدودة',
-      amount: '950,000 ريال',
-      date: '2025-01-10',
-      status: 'قيد المراجعة',
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch proposals for the tender
+        const proposalsResponse = await fetch(`/api/tenders/${id}/proposals`);
+        if (proposalsResponse.ok) {
+          const proposalsData = await proposalsResponse.json();
+          setProposals(proposalsData.data || []);
+        }
+
+        // Fetch tender details
+        const tenderResponse = await fetch(`/api/tenders/${id}`);
+        if (tenderResponse.ok) {
+          const tenderData = await tenderResponse.json();
+          setTenderInfo(tenderData);
+        }
+        
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  // Transform proposal data to match the UI expectations
+  const formatProposalForUI = (proposal: Proposal, index: number) => {
+    return {
+      id: proposal.id.toString(),
+      company: proposal.supplier_company_name || proposal.company_name,
+      amount: `${proposal.proposal_price?.toLocaleString()} ريال`,
+      date: new Date(proposal.created_at).toLocaleDateString('ar-SA'),
+      status: 'قيد المراجعة', // Default status - you can enhance this based on your business logic
       summary: [
-        'العرض المالي تنافسي ويقل عن متوسط السوق بنسبة 8%',
-        'المواصفات الفنية تتوافق بنسبة 95% مع المتطلبات',
-        'المواد معتمدة ومطابقة للمواصفات'
+        `العرض المالي: ${proposal.proposal_price?.toLocaleString()} ريال`,
+        proposal.extra_description || 'لا توجد ملاحظات إضافية',
+        `رقم المرجع: ${proposal.reference_number}`
       ],
       supplier: {
-        name: 'شركة البناء الحديثة المحدودة',
-        commercialRecord: '1010123456',
-        phone: '966112345678',
-        city: 'الرياض',
-        industry: 'البناء والإنشاءات',
-        licenses: ['رخصة البناء', 'رخصة المقاولات', 'رخصة السلامة'],
-        certs: ['ISO 9001', 'ISO 14001', 'OHSAS 18001'],
-        contact: { name: 'أحمد محمد العلي', email: 'ahmed.ali@construction-co.sa', mobile: '966501234567' },
-        registeredOnPlatformYears: 15
+        name: proposal.supplier_company_name || proposal.company_name,
+        commercialRecord: proposal.supplier_commercial_record,
+        phone: proposal.supplier_phone,
+        city: proposal.supplier_city,
+        industry: proposal.supplier_domain_name || 'غير محدد',
+        licenses: proposal.licenses || [],
+        certs: proposal.certificates || [],
+        contact: { 
+          name: proposal.supplier_account_name, 
+          email: proposal.supplier_email, 
+          mobile: proposal.supplier_account_phone?.toString() || proposal.supplier_phone 
+        },
+        registeredOnPlatformYears: 'غير محدد' // You can calculate this based on supplier creation date
       }
-    },
-    {
-      id: 'o2',
-      company: 'مؤسسة الإنشاءات التطبيقية',
-      amount: '1,020,000 ريال',
-      date: '2025-01-10',
-      status: 'مطروح',
-      summary: ['العرض المالي ضمن النطاق', 'يوفر خدمات صيانة متميزة'],
-      supplier: {
-        name: 'مؤسسة الإنشاءات التطبيقية',
-        commercialRecord: '1012345678',
-        phone: '966198765432',
-        city: 'جدة',
-        industry: 'الإنشاءات',
-        licenses: ['رخصة البناء'],
-        certs: ['ISO 9001'],
-        contact: { name: 'سعيد الخالد', email: 'saeed@apptco.sa', mobile: '966512345678' },
-        registeredOnPlatformYears: 3
-      }
-    },
-    {
-      id: 'o3',
-      company: 'شركة الشباب الهندسية',
-      amount: '980,000 ريال',
-      date: '2025-01-10',
-      status: 'معتمد',
-      summary: ['عرض فني جيد', 'التسليم خلال 45 يوم'],
-      supplier: {
-        name: 'شركة الشباب الهندسية',
-        commercialRecord: '1098765432',
-        phone: '966155544433',
-        city: 'مكة',
-        industry: 'الهندسة',
-        licenses: ['رخصة المقاولات'],
-        certs: ['ISO 9001'],
-        contact: { name: 'محمد السالم', email: 'm.salem@shabab.sa', mobile: '966512345000' },
-        registeredOnPlatformYears: 8
-      }
-    }
-  ];
+    };
+  };
+
+  // Convert proposals to the expected format
+  const offers = proposals.map(formatProposalForUI);
 
   const openSupplierModal = (supplier: any) => setModalSupplier(supplier);
   const closeSupplierModal = () => setModalSupplier(null);
@@ -93,68 +118,102 @@ export default function TenderOffers() {
         </div>
 
         {/* Tender Info Cards */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8" dir="rtl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+        {!loading && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-8" dir="rtl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold">{tenderInfo?.title || 'المناقصة'}</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">جاري التقييم</p>
+                <p className="font-semibold text-green-600">حالة المناقصة</p>
+              </div>
+              
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">
+                  {tenderInfo?.deadline ? new Date(tenderInfo.deadline).toLocaleDateString('ar-SA') : 'غير محدد'}
+                </p>
+                <p className="font-semibold">تاريخ الانتهاء</p>
+              </div>
+              
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">
+                  {tenderInfo?.budget ? `${tenderInfo.budget.toLocaleString()} ريال` : 'غير محدد'}
+                </p>
+                <p className="font-semibold">ميزانية المناقصة</p>
+              </div>
+              
+              <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">{offers.length}</p>
+                <p className="font-semibold">إجمالي العروض</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center" dir="rtl">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tawreed-green mx-auto mb-4"></div>
+            <p className="text-gray-600">جاري تحميل العروض المقدمة...</p>
+          </div>
+        )}
+
+        {/* No Proposals State */}
+        {!loading && offers.length === 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center" dir="rtl">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold">بناء ورشة سيارات</h2>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">لا توجد عروض مقدمة</h3>
+            <p className="text-gray-600 mb-4">لم يتم تقديم أي عروض لهذه المناقصة حتى الآن</p>
+            <Link 
+              to={`/tender/${id}`}
+              className="inline-flex items-center px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600 transition-colors"
+            >
+              العودة إلى تفاصيل المناقصة
+            </Link>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">جاري التقييم</p>
-              <p className="font-semibold text-green-600">حالة المناقصة</p>
-            </div>
-            
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">2025-08-04</p>
-              <p className="font-semibold">تاريخ الانتهاء</p>
-            </div>
-            
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">1,000,000 ريال</p>
-              <p className="font-semibold">ميزانية المناقصة</p>
-            </div>
-            
-            <div className="bg-white border rounded-lg p-4 text-center">
-              <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">8</p>
-              <p className="font-semibold">إجمالي العروض</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Offers Ranking Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6" dir="rtl">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span>ترتيب حسب العرض الأفضل</span>
-          </h3>
-          
-          <div className="space-y-6">
-            {offers.map((offer, index) => (
+        {!loading && offers.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6" dir="rtl">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span>ترتيب حسب العرض الأفضل</span>
+            </h3>
+            
+            <div className="space-y-6">
+              {offers.map((offer, index) => (
               <div key={offer.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 
                 {/* Company Header */}
@@ -266,7 +325,7 @@ export default function TenderOffers() {
                 <div className="p-4 bg-white">
                   <button
                     className="w-full bg-tawreed-green text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-                    onClick={() => navigate(`/tender/${id}/award/${offer.id}`, { state: { supplier: offer.supplier } })}
+                    onClick={() => navigate(`/tender/${id}/award/${offer.id}`, { state: { supplier: offer.supplier, proposalId: offer.id } })}
                   >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -278,6 +337,7 @@ export default function TenderOffers() {
             ))}
           </div>
         </div>
+        )}
 
         {/* Supplier modal */}
         {modalSupplier && (

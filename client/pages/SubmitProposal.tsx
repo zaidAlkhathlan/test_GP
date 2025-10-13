@@ -13,7 +13,7 @@ interface FileUpload {
   allowedFormats?: string;
 }
 
-export default function SubmitOffer() {
+export default function SubmitProposal() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -137,8 +137,17 @@ export default function SubmitOffer() {
       return;
     }
 
-    // Get supplier data from localStorage
-    const supplierData = localStorage.getItem('supplier');
+    // Get supplier data from localStorage - check multiple possible keys
+    const supplierData = localStorage.getItem('supplier') || 
+                        localStorage.getItem('supplierSession') || 
+                        localStorage.getItem('currentSupplier');
+    
+    console.log('Checking localStorage for supplier data:');
+    console.log('supplier:', localStorage.getItem('supplier'));
+    console.log('supplierSession:', localStorage.getItem('supplierSession'));
+    console.log('currentSupplier:', localStorage.getItem('currentSupplier'));
+    console.log('Final supplierData:', supplierData);
+    
     if (!supplierData) {
       alert('يرجى تسجيل الدخول أولاً');
       navigate('/supplier/signin');
@@ -146,6 +155,7 @@ export default function SubmitOffer() {
     }
 
     const supplier = JSON.parse(supplierData);
+    console.log('Parsed supplier data:', supplier);
 
     setLoading(true);
     
@@ -153,10 +163,9 @@ export default function SubmitOffer() {
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('tender_id', id!);
-      formData.append('supplier_id', supplier.ID.toString());
+      formData.append('supplier_id', supplier.id.toString());
       formData.append('proposal_price', offerValue);
-      formData.append('project_description', additionalNotes);
-      formData.append('company_name', supplier.company_name || '');
+      formData.append('extra_description', additionalNotes);
       
       // Add files to FormData
       files.forEach((fileEntry) => {
@@ -165,14 +174,14 @@ export default function SubmitOffer() {
           const fieldName = fileEntry.id.toLowerCase().includes('technical') ? 'technical_file' :
                            fileEntry.id.toLowerCase().includes('financial') ? 'financial_file' :
                            fileEntry.id.toLowerCase().includes('company') ? 'company_file' :
-                           'additional_file';
+                           'extra_file';
           formData.append(fieldName, fileEntry.file);
         }
       });
 
       console.log('Submitting proposal to API...');
       
-      // Submit to backend API (updated to proposals endpoint)
+      // Submit to backend API
       const response = await fetch(`/api/tenders/${id}/proposals`, {
         method: 'POST',
         body: formData // Don't set Content-Type header, let browser set it with boundary

@@ -248,59 +248,112 @@ export const getSupplierById: RequestHandler = (req, res) => {
 
 // Update supplier
 export const updateSupplier: RequestHandler = (req, res) => {
+  console.log("🔵 updateSupplier endpoint called");
+  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+  
   const { id } = req.params;
-  const {
-    commercial_registration_number,
-    commercial_phone_number,
-    domains_id,
-    city,
-    logo,
-    account_name,
-    account_email,
-    account_phone,
-    company_name
-  } = req.body;
+  const updateData = req.body;
 
-  const currentTime = new Date().toISOString();
+  // Build dynamic SQL update query
+  const allowedFields = [
+    'Commercial_registration_number',
+    'Commercial_Phone_number',
+    'domains_id',
+    'City',
+    'Logo',
+    'Account_name',
+    'Account_email',
+    'Account_phone',
+    'company_name',
+    'industry'
+  ];
 
-  db.run(
-    `UPDATE Supplier SET 
-      Commercial_registration_number = ?, Commercial_Phone_number = ?, 
-      domains_id = ?, City = ?, Logo = ?, Account_name = ?, 
-      Account_email = ?, Account_phone = ?, company_name = ?, updated_at = ?
-     WHERE ID = ?`,
-    [
-      commercial_registration_number,
-      commercial_phone_number,
-      domains_id,
-      city,
-      logo,
-      account_name,
-      account_email,
-      account_phone,
-      company_name,
-      currentTime,
-      id
-    ],
-    function(err) {
-      if (err) {
-        console.error("Error updating supplier:", err);
-        if (err.message.includes('UNIQUE constraint failed')) {
-          res.status(400).json({ error: "Email already exists" });
-        } else {
-          res.status(500).json({ error: "Failed to update supplier" });
-        }
-        return;
+  const fieldsToUpdate = Object.keys(updateData).filter(key => {
+    // Map frontend field names to database field names
+    const dbFieldMap: { [key: string]: string } = {
+      'commercial_registration_number': 'Commercial_registration_number',
+      'commercial_phone_number': 'Commercial_Phone_number',
+      'city': 'City',
+      'logo': 'Logo',
+      'account_name': 'Account_name',
+      'account_email': 'Account_email',
+      'account_phone': 'Account_phone',
+      'company_name': 'company_name',
+      'industry': 'industry'
+    };
+    
+    const dbField = dbFieldMap[key] || key;
+    return allowedFields.includes(dbField);
+  });
+  
+  if (fieldsToUpdate.length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+
+  // Map field names and prepare values
+  const setClause = fieldsToUpdate.map(field => {
+    const dbFieldMap: { [key: string]: string } = {
+      'commercial_registration_number': 'Commercial_registration_number',
+      'commercial_phone_number': 'Commercial_Phone_number',
+      'city': 'City',
+      'logo': 'Logo',
+      'account_name': 'Account_name',
+      'account_email': 'Account_email',
+      'account_phone': 'Account_phone',
+      'company_name': 'company_name',
+      'industry': 'industry'
+    };
+    
+    const dbField = dbFieldMap[field] || field;
+    return `${dbField} = ?`;
+  }).join(', ');
+
+  const values = fieldsToUpdate.map(field => updateData[field]);
+  values.push(new Date().toISOString()); // Add updated_at
+  values.push(id); // Add id for WHERE clause
+
+  const sql = `UPDATE Supplier SET ${setClause}, updated_at = ? WHERE ID = ?`;
+  
+  console.log("🗄️ Attempting to update supplier in database...");
+  console.log("📝 SQL:", sql);
+  console.log("📊 Values:", values);
+
+  db.run(sql, values, function(err) {
+    if (err) {
+      console.error("❌ Database update error:", err);
+      if (err.message && err.message.includes('UNIQUE constraint failed')) {
+        res.status(400).json({ error: "Email already exists" });
+      } else {
+        res.status(500).json({ error: "Failed to update supplier" });
       }
-
-      if (this.changes === 0) {
-        res.status(404).json({ error: "Supplier not found" });
-        return;
-      }
-
-      res.json({ success: true, message: "Supplier updated successfully" });
+      return;
     }
-  );
+
+    if (this.changes === 0) {
+      console.log("❌ No supplier found with ID:", id);
+      res.status(404).json({ error: "Supplier not found" });
+      return;
+    }
+
+    console.log("✅ Supplier updated successfully");
+    
+    // Return updated supplier data
+    db.get("SELECT * FROM Supplier WHERE ID = ?", [id], (err: Error | null, row: any) => {
+      if (err) {
+        console.error("❌ Error fetching updated supplier:", err);
+        res.status(500).json({ error: "Failed to fetch updated supplier" });
+        return;
+      }
+      
+      if (row) {
+        // Do not return the stored password
+        delete row.Account_password;
+      }
+      
+      console.log("📤 Sending updated supplier response:", row);
+      res.json(row);
+    });
+  });
 };
 
 // Delete supplier
