@@ -75,7 +75,10 @@ export const getTenderById: RequestHandler = (req, res) => {
   
   db.get(
     `SELECT 
-      t.*,
+      t.id, t.buyer_id, t.reference_number, t.title, t.domain_id, t.project_description, 
+      t.city, t.created_at, t.submit_deadline, t.quires_deadline, t.contract_time, 
+      t.previous_work, t.evaluation_criteria, t.used_technologies, t.tender_coordinator, 
+      t.coordinator_email, t.coordinator_phone, t.file1_name, t.file2_name, t.expected_budget,
       d.Name as domain_name
      FROM tender t
      LEFT JOIN domains d ON t.domain_id = d.ID
@@ -157,12 +160,12 @@ export const getTenderById: RequestHandler = (req, res) => {
                         },
                         // Only include documents that actually exist
                         documents: [
-                          row.file1_name && row.file1 ? {
+                          row.file1_name ? {
                             name: row.file1_name,
                             url: `/api/tenders/${id}/file1`,
                             size: 'متاح للتنزيل'
                           } : null,
-                          row.file2_name && row.file2 ? {
+                          row.file2_name ? {
                             name: row.file2_name, 
                             url: `/api/tenders/${id}/file2`,
                             size: 'متاح للتنزيل'

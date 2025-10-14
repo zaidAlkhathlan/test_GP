@@ -31,6 +31,12 @@ export default function TenderOffers() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenderInfo, setTenderInfo] = useState<any>(null);
+  const [fileModalProposal, setFileModalProposal] = useState<any | null>(null);
+
+  // Debug effect to track tenderInfo state changes
+  useEffect(() => {
+    console.log('TenderInfo state changed:', tenderInfo);
+  }, [tenderInfo]);
 
   useEffect(() => {
     if (!id) return;
@@ -48,9 +54,17 @@ export default function TenderOffers() {
 
         // Fetch tender details
         const tenderResponse = await fetch(`/api/tenders/${id}`);
+        console.log('Tender response status:', tenderResponse.status);
         if (tenderResponse.ok) {
           const tenderData = await tenderResponse.json();
+          console.log('Full tender data received:', JSON.stringify(tenderData, null, 2));
+          console.log('Expected budget field:', tenderData.tender?.expected_budget);
+          console.log('Submit deadline field:', tenderData.tender?.submit_deadline);
+          console.log('All tender keys:', Object.keys(tenderData));
+          console.log('All nested tender keys:', Object.keys(tenderData.tender || {}));
           setTenderInfo(tenderData);
+        } else {
+          console.error('Failed to fetch tender data:', tenderResponse.status);
         }
         
       } catch (error) {
@@ -72,9 +86,7 @@ export default function TenderOffers() {
       date: new Date(proposal.created_at).toLocaleDateString('ar-SA'),
       status: 'قيد المراجعة', // Default status - you can enhance this based on your business logic
       summary: [
-        `العرض المالي: ${proposal.proposal_price?.toLocaleString()} ريال`,
-        proposal.extra_description || 'لا توجد ملاحظات إضافية',
-        `رقم المرجع: ${proposal.reference_number}`
+        // Smart summary will be populated by external API
       ],
       supplier: {
         name: proposal.supplier_company_name || proposal.company_name,
@@ -99,6 +111,32 @@ export default function TenderOffers() {
 
   const openSupplierModal = (supplier: any) => setModalSupplier(supplier);
   const closeSupplierModal = () => setModalSupplier(null);
+  
+  const openFileModal = (proposal: any) => setFileModalProposal(proposal);
+  const closeFileModal = () => setFileModalProposal(null);
+  
+  const downloadFile = async (proposalId: string, fileType: string) => {
+    try {
+      const response = await fetch(`/api/proposals/${proposalId}/files/${fileType}`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${fileType}_${proposalId}`; // Extension will be determined by server
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('فشل في تحميل الملف - قد يكون الملف غير متوفر');
+      }
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert('حدث خطأ أثناء تحميل الملف');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -126,7 +164,11 @@ export default function TenderOffers() {
                   <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold">{tenderInfo?.title || 'المناقصة'}</h2>
+              <h2 className="text-xl font-semibold">{tenderInfo?.tender?.title || 'المناقصة'}</h2>
+              {/* Debug info - remove this later */}
+              <div className="text-xs text-gray-500 mt-2">
+                Debug: Budget={tenderInfo?.tender?.expected_budget}, Deadline={tenderInfo?.tender?.submit_deadline}
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -147,7 +189,7 @@ export default function TenderOffers() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500 mb-1">
-                  {tenderInfo?.deadline ? new Date(tenderInfo.deadline).toLocaleDateString('ar-SA') : 'غير محدد'}
+                  {tenderInfo?.tender?.submit_deadline ? new Date(tenderInfo.tender.submit_deadline).toLocaleDateString('ar-SA') : 'غير محدد'}
                 </p>
                 <p className="font-semibold">تاريخ الانتهاء</p>
               </div>
@@ -160,7 +202,7 @@ export default function TenderOffers() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500 mb-1">
-                  {tenderInfo?.budget ? `${tenderInfo.budget.toLocaleString()} ريال` : 'غير محدد'}
+                  {tenderInfo?.tender?.expected_budget ? `${tenderInfo.tender.expected_budget.toLocaleString()} ريال` : 'غير محدد'}
                 </p>
                 <p className="font-semibold">ميزانية المناقصة</p>
               </div>
@@ -267,58 +309,48 @@ export default function TenderOffers() {
                     <h5 className="font-semibold text-blue-900">ملخص العرض الذكي</h5>
                   </div>
                   
-                  <div className="space-y-3">
-                    {offer.summary.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
-                        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                  {offer.summary.length > 0 ? (
+                    <div className="space-y-3">
+                      {offer.summary.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-3">
+                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <span className="text-gray-700">{item}</span>
                         </div>
-                        <span className="text-gray-700">{item}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-gray-500 text-sm mb-2">الملخص الذكي غير متوفر</p>
+                      <p className="text-gray-400 text-xs">سيتم عرض التحليل الذكي عند ربط الـ API الخارجي</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Files and Actions */}
                 <div className="p-4 bg-gray-50 border-t flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      ملف عادي
-                    </button>
-                    
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      ملف تجاري
-                    </button>
-                    
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      ملف الضريبة
-                    </button>
-                    
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                      ملف اضافي
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">الملفات المرفقة:</span>
+                    <span className="text-sm text-gray-500">الملف الفني، الملف المالي، ملفات إضافية</span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-500">عرض وتحميل المفات</span>
-                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <button 
+                    onClick={() => openFileModal(offer)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
-                  </div>
+                    عرض وتحميل الملفات
+                  </button>
                 </div>
 
                 {/* Award Button */}
@@ -337,6 +369,149 @@ export default function TenderOffers() {
             ))}
           </div>
         </div>
+        )}
+
+        {/* File Download Modal */}
+        {fileModalProposal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={closeFileModal}></div>
+            <div className="relative bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden" dir="rtl">
+              
+              {/* Modal Header */}
+              <div className="bg-gray-50 p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">ملفات العرض</h3>
+                    <p className="text-gray-600 mt-1">{fileModalProposal.company}</p>
+                  </div>
+                  <button 
+                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors" 
+                    onClick={closeFileModal}
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* Technical File */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">الملف الفني</h4>
+                        <p className="text-sm text-gray-500">المواصفات والوثائق التقنية</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => downloadFile(fileModalProposal.id, 'technical_file')}
+                      className="w-full px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      تحميل
+                    </button>
+                  </div>
+
+                  {/* Financial File */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">الملف المالي</h4>
+                        <p className="text-sm text-gray-500">العروض المالية والتكاليف</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => downloadFile(fileModalProposal.id, 'financial_file')}
+                      className="w-full px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      تحميل
+                    </button>
+                  </div>
+
+                  {/* Company File */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">ملف الشركة</h4>
+                        <p className="text-sm text-gray-500">وثائق الشركة والتراخيص</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => downloadFile(fileModalProposal.id, 'company_file')}
+                      className="w-full px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      تحميل
+                    </button>
+                  </div>
+
+                  {/* Extra File */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">ملفات إضافية</h4>
+                        <p className="text-sm text-gray-500">مستندات أخرى مرفقة</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => downloadFile(fileModalProposal.id, 'extra_file')}
+                      className="w-full px-4 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      تحميل
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <span>جميع الملفات محمية ومشفرة</span>
+                    </div>
+                    <span>العرض رقم: {fileModalProposal.id}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Supplier modal */}
