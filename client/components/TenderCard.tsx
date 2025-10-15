@@ -28,7 +28,13 @@ export default function TenderCard({
   const isTenderFinished = tender.status_id === 3;
 
   return (
-    <div className={clsx("w-full rounded-xl border border-gray-200 bg-white shadow-sm p-8 min-h-[420px]", className)} dir="rtl">
+    <div className={clsx(
+      "w-full rounded-xl border bg-white shadow-sm p-8 min-h-[420px]",
+      isTenderFinished 
+        ? "border-green-200 bg-green-50/30" 
+        : "border-gray-200",
+      className
+    )} dir="rtl">
       {/* Title & Company */}
       <div className="mb-6 text-right">
         <div className="flex items-start justify-between mb-2">
@@ -41,6 +47,21 @@ export default function TenderCard({
           />
         </div>
         <p className="text-base text-gray-600">{tender.company}</p>
+        
+        {/* Location: Region and City - Always show for all tenders */}
+        {(tender.region || tender.location) && (
+          <div className="mt-2 flex items-center gap-2 text-gray-600">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm">
+              {tender.region && tender.location && tender.region !== tender.location 
+                ? `${tender.region} - ${tender.location}`
+                : tender.region || tender.location
+              }
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Category tags */}
@@ -57,43 +78,50 @@ export default function TenderCard({
         </div>
       </div>
 
-      {/* Location */}
-      {tender.location && (
-        <div className="mb-4 text-right">
-          <div className="flex items-center gap-2 text-gray-600">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm">{tender.location}</span>
+      {/* Progress and Date Info - Hidden for finished tenders */}
+      {!isTenderFinished && (
+        <div className="mb-6">
+          {/* Progress circles and dates */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-[#28A745]" />
+              <div className="text-right">
+                <span className="text-sm text-gray-600 block">موعد انتهاء تقديم العروض</span>
+                <span className="text-sm font-medium">{tender.offerDeadline}</span>
+              </div>
+            </div>
+            <ProgressRing percentage={submissionProgress} days={tender.remainingDays} />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-[#28A745]" />
+              <div className="text-right">
+                <span className="text-sm text-gray-600 block">موعد انتهاء الاستفسارات</span>
+                <span className="text-sm font-medium">{tender.inquiryDeadline}</span>
+              </div>
+            </div>
+            <ProgressRing percentage={inquiryProgress} days={tender.remainingInquiryDays} />
           </div>
         </div>
       )}
 
-      {/* Progress and Date Info */}
-      <div className="mb-6">
-        {/* Progress circles and dates */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-[#28A745]" />
+      {/* Awarded Status Info - Show only for finished tenders */}
+      {isTenderFinished && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
             <div className="text-right">
-              <span className="text-sm text-gray-600 block">موعد انتهاء تقديم العروض</span>
-              <span className="text-sm font-medium">{tender.offerDeadline}</span>
+              <span className="text-sm font-semibold text-green-800 block">تم اعتماد المورد الفائز</span>
+              <span className="text-xs text-green-600">المناقصة مكتملة</span>
             </div>
           </div>
-          <ProgressRing percentage={submissionProgress} days={tender.remainingDays} />
         </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-5 h-5 text-[#28A745]" />
-            <div className="text-right">
-              <span className="text-sm text-gray-600 block">موعد انتهاء الاستفسارات</span>
-              <span className="text-sm font-medium">{tender.inquiryDeadline}</span>
-            </div>
-          </div>
-          <ProgressRing percentage={inquiryProgress} days={tender.remainingInquiryDays} />
-        </div>
-      </div>
+      )}
 
       {/* Actions */}
       {showActions && (
@@ -145,8 +173,17 @@ export default function TenderCard({
 
       {/* Footer */}
       <div className="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
-        <span>تاريخ النشر: {tender.publishDate}</span>
-        <span>الرقم المرجعي {tender.referenceNumber}</span>
+        {isTenderFinished ? (
+          <>
+            <span>حالة المناقصة: مكتملة</span>
+            <span>الرقم المرجعي {tender.referenceNumber}</span>
+          </>
+        ) : (
+          <>
+            <span>تاريخ النشر: {tender.publishDate}</span>
+            <span>الرقم المرجعي {tender.referenceNumber}</span>
+          </>
+        )}
       </div>
     </div>
   );

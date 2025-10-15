@@ -174,6 +174,7 @@ export interface Tender {
   company: string;
   category?: string;
   location?: string;
+  region?: string;
   budget?: string;
   publishDate: string;
   offerDeadline: string;
