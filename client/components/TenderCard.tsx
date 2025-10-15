@@ -115,7 +115,7 @@ export default function TenderCard({
       {/* Budget */}
       <div className="mb-6 text-right">
         <span className="text-base text-gray-600 block mb-1">الميزانية المتوقعة:</span>
-        <div className="text-2xl font-bold text-gray-900">{tender.budget || '100,000 ريال'}</div>
+        <div className="text-2xl font-bold text-gray-900">{tender.budget || 'خطأ في تحميل الميزانية'}</div>
       </div>
 
       {/* Footer */}

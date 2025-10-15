@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
+import LocationSelector from '../components/LocationSelector';
 
 interface CompanyProfile {
   id: number;
   company_name: string;
   commercial_registration_number: string;
   commercial_phone_number: string;
-  city: string;
+  city_id?: number;
+  city_name?: string;
+  region_name?: string;
   account_name: string;
   account_email: string;
   account_phone: number;
@@ -45,6 +48,8 @@ export default function CompanyProfile() {
   const [certificatesLoading, setCertificatesLoading] = useState(false);
   const [availableLicenses, setAvailableLicenses] = useState<License[]>([]);
   const [availableCertificates, setAvailableCertificates] = useState<Certificate[]>([]);
+  const [selectedRegionId, setSelectedRegionId] = useState<number>(0);
+  const [selectedCityId, setSelectedCityId] = useState<number>(0);
   const [showAddLicenseDialog, setShowAddLicenseDialog] = useState(false);
   const [showAddCertificateDialog, setShowAddCertificateDialog] = useState(false);
 
@@ -351,7 +356,7 @@ export default function CompanyProfile() {
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">{companyData.company_name}</h2>
-              <p className="text-gray-600">{companyData.industry || 'غير محدد'}</p>
+              <p className="text-gray-600">{companyData.industry || 'خطأ في التحميل'}</p>
               <button 
                 className="mt-2 text-sm text-tawreed-green hover:underline"
                 onClick={() => {
@@ -425,18 +430,27 @@ export default function CompanyProfile() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">الموقع</label>
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={editableData.city || ''}
-                    onChange={(e) => setEditableData(prev => ({ ...prev, city: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green"
+                  <LocationSelector
+                    regionId={selectedRegionId}
+                    cityId={selectedCityId}
+                    onRegionChange={(regionId) => {
+                      setSelectedRegionId(regionId);
+                    }}
+                    onCityChange={(cityId) => {
+                      setSelectedCityId(cityId);
+                      setEditableData(prev => ({ ...prev, city_id: cityId }));
+                    }}
+                    required={true}
                   />
                 ) : (
                   <div className="px-3 py-2 bg-gray-50 rounded-lg text-gray-900 flex items-center gap-2">
                     <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19S6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6Z" />
                     </svg>
-                    {companyData.city}
+                    {companyData.city_name && companyData.region_name 
+                      ? `${companyData.city_name}, ${companyData.region_name}`
+                      : 'خطأ في التحميل'
+                    }
                   </div>
                 )}
               </div>

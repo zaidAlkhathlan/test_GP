@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Select from "react-select";
 import { Link } from "react-router-dom";
 import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from "@shared/api";
+import LocationSelector from "../components/LocationSelector";
 
 
 export default function Register() {
@@ -12,7 +13,8 @@ export default function Register() {
   const [institutionType, setInstitutionType] = useState("");
   const [selectedDomain, setSelectedDomain] = useState<string>("");
   const [selectedSubDomains, setSelectedSubDomains] = useState<{ value: string; label: string }[]>([]);
-  const [location, setLocation] = useState("");
+  const [selectedRegionId, setSelectedRegionId] = useState<number>(0);
+  const [selectedCityId, setSelectedCityId] = useState<number>(0);
   const [mobileNumber, setMobileNumber] = useState("");
   const [activityDescription, setActivityDescription] = useState("");
   const [certificates, setCertificates] = useState<{ value: string; label: string }[]>([]);
@@ -99,7 +101,8 @@ export default function Register() {
       institutionType,
       selectedDomain,
       selectedSubDomains,
-      location,
+      regionId: selectedRegionId,
+      cityId: selectedCityId,
       mobileNumber,
       activityDescription,
       certificates,
@@ -299,27 +302,15 @@ export default function Register() {
                   )}
                 </div>
 
-                {/* Location */}
+                {/* Location Selector */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
-                    الموقع
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="أدخل موقع الرئيسي للشركة"
-                      className="w-full px-3 py-2.5 pr-10 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
-                      dir="rtl"
-                    />
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.3334 6.66634C13.3334 9.99501 9.64075 13.4617 8.40075 14.5323C8.28523 14.6192 8.14461 14.6662 8.00008 14.6662C7.85555 14.6662 7.71493 14.6192 7.59941 14.5323C6.35941 13.4617 2.66675 9.99501 2.66675 6.66634C2.66675 5.25185 3.22865 3.8953 4.22885 2.89511C5.22904 1.89491 6.58559 1.33301 8.00008 1.33301C9.41457 1.33301 10.7711 1.89491 11.7713 2.89511C12.7715 3.8953 13.3334 5.25185 13.3334 6.66634Z" stroke="#64748B" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M8 8.66699C9.10457 8.66699 10 7.77156 10 6.66699C10 5.56242 9.10457 4.66699 8 4.66699C6.89543 4.66699 6 5.56242 6 6.66699C6 7.77156 6.89543 8.66699 8 8.66699Z" stroke="#64748B" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                  </div>
+                  <LocationSelector
+                    regionId={selectedRegionId}
+                    cityId={selectedCityId}
+                    onRegionChange={setSelectedRegionId}
+                    onCityChange={setSelectedCityId}
+                    required={true}
+                  />
                 </div>
 
                 {/* Mobile Number */}

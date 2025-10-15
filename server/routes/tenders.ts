@@ -15,10 +15,14 @@ export const getTenders: RequestHandler = (req, res) => {
     t.*,
     d.Name as domain_name,
     b.Account_name as buyer_name,
-    b.company_name as buyer_company
+    b.company_name as buyer_company,
+    c.name as city_name,
+    r.name as region_name
    FROM tender t
    LEFT JOIN domains d ON t.domain_id = d.ID
-   LEFT JOIN Buyer b ON t.buyer_id = b.ID`;
+   LEFT JOIN Buyer b ON t.buyer_id = b.ID
+   LEFT JOIN City c ON t.city_id = c.id
+   LEFT JOIN Region r ON c.region_id = r.id`;
   
   const params: any[] = [];
   
@@ -76,12 +80,14 @@ export const getTenderById: RequestHandler = (req, res) => {
   db.get(
     `SELECT 
       t.id, t.buyer_id, t.reference_number, t.title, t.domain_id, t.project_description, 
-      t.city, t.created_at, t.submit_deadline, t.quires_deadline, t.contract_time, 
+      t.city_id, t.created_at, t.submit_deadline, t.quires_deadline, t.contract_time, 
       t.previous_work, t.evaluation_criteria, t.used_technologies, t.tender_coordinator, 
       t.coordinator_email, t.coordinator_phone, t.file1_name, t.file2_name, t.expected_budget,
-      d.Name as domain_name
+      d.Name as domain_name, c.name as city_name, r.name as region_name
      FROM tender t
      LEFT JOIN domains d ON t.domain_id = d.ID
+     LEFT JOIN City c ON t.city_id = c.id
+     LEFT JOIN Region r ON c.region_id = r.id
      WHERE t.id = ?`,
     [id],
     (err, row) => {
@@ -156,7 +162,7 @@ export const getTenderById: RequestHandler = (req, res) => {
                         contactInfo: {
                           email: row.coordinator_email || null,
                           phone: row.coordinator_phone || null,
-                          address: row.city ? `${row.city}, المملكة العربية السعودية` : null
+                          address: row.city_name ? `${row.city_name}, المملكة العربية السعودية` : null
                         },
                         // Only include documents that actually exist
                         documents: [
@@ -222,7 +228,7 @@ export const createTender: RequestHandler = (req, res) => {
     domain_id,
     sub_domain_ids,
     project_description,
-    city,
+    city_id,
     submit_deadline,
     quires_deadline,
     contract_time,
@@ -320,13 +326,13 @@ export const createTender: RequestHandler = (req, res) => {
       db.run(
         `INSERT INTO tender (
           buyer_id, reference_number, title, domain_id, project_description,
-          city, submit_deadline, quires_deadline, contract_time, previous_work,
+          city_id, submit_deadline, quires_deadline, contract_time, previous_work,
           evaluation_criteria, used_technologies, tender_coordinator, coordinator_email, coordinator_phone, 
           file1, file2, file1_name, file2_name, expected_budget, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
           buyer_id, nextRefNumber, title, domain_id, project_description,
-          city, submit_deadline, quires_deadline, contract_time, previous_work,
+          city_id, submit_deadline, quires_deadline, contract_time, previous_work,
           evaluation_criteria || null, used_technologies || null, tender_coordinator, coordinator_email, coordinator_phone,
           file1Data, file2Data, file1Name, file2Name, parseFloat(expected_budget) || null
         ],
@@ -341,7 +347,13 @@ export const createTender: RequestHandler = (req, res) => {
           console.log("✅ Tender created with ID:", tenderId);
           
           // Function to complete tender creation after all relationships are inserted
+          let responseAlreadySent = false;
           const completeTenderCreation = () => {
+            if (responseAlreadySent) {
+              console.log("⚠️ Response already sent, skipping duplicate call");
+              return;
+            }
+            
             console.log("✅ Tender creation completed:", {
               tenderId, 
               insertedSubDomains, 
@@ -354,6 +366,7 @@ export const createTender: RequestHandler = (req, res) => {
               totalRequiredFiles
             });
             
+            responseAlreadySent = true;
             res.status(201).json({
               success: true,
               tender: {
@@ -543,7 +556,7 @@ export const updateTender: RequestHandler = (req, res) => {
       title = COALESCE(?, title),
       domain_id = COALESCE(?, domain_id),
       project_description = COALESCE(?, project_description),
-      city = COALESCE(?, city),
+      city_id = COALESCE(?, city_id),
       submit_deadline = COALESCE(?, submit_deadline),
       quires_deadline = COALESCE(?, quires_deadline),
       contract_time = COALESCE(?, contract_time),
@@ -558,7 +571,7 @@ export const updateTender: RequestHandler = (req, res) => {
       tender.title,
       tender.domain_id,
       tender.project_description,
-      tender.city,
+      tender.city_id,
       tender.submit_deadline,
       tender.quires_deadline,
       tender.contract_time,

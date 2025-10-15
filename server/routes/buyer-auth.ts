@@ -13,8 +13,11 @@ export interface LoginResponse {
     company_name: string;
     account_name: string;
     account_email: string;
-    city: string;
+    city_id: number;
+    city_name: string;
+    region_name: string;
     domains_id: number;
+    domain_name: string;
   };
   message?: string;
 }
@@ -35,7 +38,16 @@ export const loginBuyer: RequestHandler = (req, res) => {
 
   console.log("🔍 Searching for buyer with email:", account_email);
 
-  db.get("SELECT * FROM Buyer WHERE Account_email = ?", [account_email], (err: Error | null, row: any) => {
+  db.get(`SELECT 
+    b.*, 
+    c.name as city_name, 
+    r.name as region_name,
+    d.Name as domain_name
+  FROM Buyer b
+  LEFT JOIN City c ON b.city_id = c.id
+  LEFT JOIN Region r ON c.region_id = r.id
+  LEFT JOIN domains d ON b.domains_id = d.ID
+  WHERE b.Account_email = ?`, [account_email], (err: Error | null, row: any) => {
     if (err) {
       console.error("❌ Database error:", err);
       return res.status(500).json({
@@ -65,14 +77,17 @@ export const loginBuyer: RequestHandler = (req, res) => {
 
     console.log("✅ Password match - login successful");
 
-    // Return buyer info without password
+    // Return buyer info without password - using normalized location data
     const buyerInfo = {
       id: row.ID,
       company_name: row.company_name,
       account_name: row.Account_name,
       account_email: row.Account_email,
-      city: row.City,
-      domains_id: row.domains_id
+      city_id: row.city_id,
+      city_name: row.city_name || 'خطأ في تحميل المدينة',
+      region_name: row.region_name || 'خطأ في تحميل المنطقة',
+      domains_id: row.domains_id,
+      domain_name: row.domain_name || 'خطأ في تحميل النشاط'
     };
 
     res.json({

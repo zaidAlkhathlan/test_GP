@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Select from 'react-select';
 import Header from '../components/Header';
+import LocationSelector from '../components/LocationSelector';
 import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from '@shared/api';
 
 export default function CreateTender() {
@@ -29,10 +30,13 @@ export default function CreateTender() {
   const [selectedSubDomains, setSelectedSubDomains] = useState<{ value: string; label: string }[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(false);
 
+  // Location state
+  const [selectedRegionId, setSelectedRegionId] = useState<number>(0);
+  const [selectedCityId, setSelectedCityId] = useState<number>(0);
+
   // Form data state
   const [formData, setFormData] = useState({
     title: '',
-    location: '',
     projectDescription: '',
     previousWork: '',
     coordinatorName: '',
@@ -250,7 +254,7 @@ export default function CreateTender() {
       formDataToSend.append('domain_id', selectedDomain);
       formDataToSend.append('sub_domain_ids', JSON.stringify(selectedSubDomains.map(sd => parseInt(sd.value))));
       formDataToSend.append('project_description', formData.projectDescription);
-      formDataToSend.append('city', formData.location);
+      formDataToSend.append('city_id', selectedCityId.toString());
       formDataToSend.append('submit_deadline', `${bidOpenDate} ${bidOpenTime}`);
       formDataToSend.append('quires_deadline', `${enquiryEndDate} ${enquiryEndTime}`);
       formDataToSend.append('contract_time', `${durationDays} يوم`);
@@ -462,11 +466,14 @@ export default function CreateTender() {
 
               {/* الموقع */}
               <div className="mb-5">
-                <input 
-                  className="w-full border rounded-lg px-3 py-2.5 bg-white" 
-                  placeholder="الموقع" 
-                  value={formData.location}
-                  onChange={(e) => updateFormData('location', e.target.value)}
+                <LocationSelector
+                  regionId={selectedRegionId}
+                  cityId={selectedCityId}
+                  onRegionChange={setSelectedRegionId}
+                  onCityChange={setSelectedCityId}
+                  regionPlaceholder="اختر المنطقة"
+                  cityPlaceholder="اختر مدينة تنفيذ المشروع"
+                  required={true}
                 />
               </div>
 

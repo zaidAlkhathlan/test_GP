@@ -104,8 +104,17 @@ export const loginSupplier: RequestHandler = (req, res) => {
 
   console.log("🔍 Searching for supplier with email:", account_email);
 
-  // Query supplier from the new schema using Account_email column
-  db.get("SELECT * FROM Supplier WHERE Account_email = ?", [account_email], (err: Error | null, row: any) => {
+  // Query supplier with city and region information
+  db.get(`SELECT 
+    s.*, 
+    c.name as city_name, 
+    r.name as region_name,
+    d.Name as domain_name
+  FROM Supplier s
+  LEFT JOIN City c ON s.city_id = c.id
+  LEFT JOIN Region r ON c.region_id = r.id
+  LEFT JOIN domains d ON s.domains_id = d.ID
+  WHERE s.Account_email = ?`, [account_email], (err: Error | null, row: any) => {
     if (err) {
       console.error("❌ Database error:", err);
       return res.status(500).json({
@@ -135,32 +144,25 @@ export const loginSupplier: RequestHandler = (req, res) => {
 
     console.log("✅ Password match - login successful");
 
-    // Get domain information for the supplier
-    db.get("SELECT Name FROM domains WHERE ID = ?", [row.domains_id], (domainErr: Error | null, domainRow: any) => {
-      const domainName = domainRow?.Name || '';
-      
-      if (domainErr) {
-        console.warn("⚠️ Could not fetch domain info:", domainErr);
-      }
+    // Return supplier info without password - using normalized location data
+    const supplierInfo = {
+      id: row.ID,
+      company_name: row.company_name,
+      account_name: row.Account_name,
+      account_email: row.Account_email,
+      city_id: row.city_id,
+      city_name: row.city_name || 'خطأ في تحميل المدينة',
+      region_name: row.region_name || 'خطأ في تحميل المنطقة',
+      commercial_registration_number: row.Commercial_registration_number,
+      commercial_phone_number: row.Commercial_Phone_number,
+      account_phone: row.Account_phone,
+      domain: row.domain_name || 'خطأ في تحميل النشاط',
+      created_at: row.created_at
+    };
 
-      // Return supplier info without password - using new schema column names
-      const supplierInfo = {
-        id: row.ID,
-        company_name: row.company_name,
-        account_name: row.Account_name,
-        account_email: row.Account_email,
-        city: row.City,
-        commercial_registration_number: row.Commercial_registration_number,
-        commercial_phone_number: row.Commercial_Phone_number,
-        account_phone: row.Account_phone,
-        domain: domainName,
-        created_at: row.created_at
-      };
-
-      res.json({
-        success: true,
-        supplier: supplierInfo
-      });
+    res.json({
+      success: true,
+      supplier: supplierInfo
     });
   });
 };

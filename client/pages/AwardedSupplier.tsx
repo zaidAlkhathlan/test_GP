@@ -24,11 +24,11 @@ export default function AwardedSupplier() {
 
   // Fallback demo data if navigated directly
   const data: SupplierData = supplier ?? {
-    name: 'شركة البناء الحديثة المحدودة',
-    commercialRecord: '1010123456',
-    city: 'الرياض',
-    industry: 'البناء والإنشاءات',
-    contact: { name: 'أحمد محمد العلي', email: 'ahmed.ali@construction-co.sa', mobile: '966501234567' }
+    name: 'خطأ في تحميل اسم الشركة',
+    commercialRecord: 'خطأ في التحميل',
+    city: 'خطأ في تحميل المدينة',
+    industry: 'خطأ في تحميل القطاع',
+    contact: { name: 'خطأ في التحميل', email: 'خطأ في التحميل', mobile: 'خطأ في التحميل' }
   };
 
   return (

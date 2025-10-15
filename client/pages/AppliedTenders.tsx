@@ -50,7 +50,7 @@ const AIPredictionDashboard: React.FC<AIPredictionDashboardProps> = ({ appliedTe
             </div>
           </div>
           <p className="text-xs text-blue-700">خلال الأسبوع الحالي</p>
-          <div className="text-sm font-semibold text-blue-600 mt-2">↗️ +12% من الأسبوع الماضي</div>
+          <div className="text-sm font-semibold text-blue-600 mt-2">↗️ خطأ في تحميل النمو</div>
         </div>
 
         {/* Market Prices */}
@@ -397,11 +397,11 @@ export default function AppliedTenders() {
 
           return {
             id: offer.tender_id?.toString() || offer.id?.toString() || '',
-            title: offer.tender_title || 'غير محدد',
-            company: offer.buyer_company || 'غير محدد',
-            category: 'غير محدد', // Could be derived from domain
-            location: 'غير محدد',
-            budget: offer.expected_budget ? `${offer.expected_budget.toLocaleString()} ريال` : 'غير محدد',
+            title: offer.tender_title || 'خطأ في التحميل',
+            company: offer.buyer_company || 'خطأ في التحميل',
+            category: 'خطأ في التحميل', // Could be derived from domain
+            location: 'خطأ في التحميل',
+            budget: offer.expected_budget ? `${offer.expected_budget.toLocaleString()} ريال` : 'خطأ في التحميل',
             publishDate: offer.created_at ? new Date(offer.created_at).toISOString().split('T')[0] : '',
             offerDeadline: offer.submit_deadline || '',
             inquiryDeadline: offer.quires_deadline || '',

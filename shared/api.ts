@@ -38,18 +38,18 @@ export interface Buyer {
   id?: number;
   commercial_registration_number: string;
   commercial_phone_number: string;
-  industry: string;
+  domains_id: number;
   company_name: string;
-  city: string;
+  city_id: number;
+  city_name?: string; // Optional, for display purposes
+  region_name?: string; // Optional, for display purposes
   logo?: string | null;
   account_name: string;
   account_email: string;
   account_phone: string;
   account_password: string;
-  licenses?: string | null;
-  certificates?: string | null;
   created_at?: string;
-  updated_at?: string | null;
+  updated_at?: string;
 }
 
 export interface LoginRequest {
@@ -74,17 +74,17 @@ export interface Supplier {
   id?: number;
   commercial_registration_number: string;
   commercial_phone_number: string;
-  industry: string;
+  domains_id: number;
   created_at?: string;
-  city: string;
-  updated_at?: string | null;
+  city_id: number;
+  city_name?: string; // Optional, for display purposes
+  region_name?: string; // Optional, for display purposes
+  updated_at?: string;
   logo?: string | null;
   account_name: string;
   account_email: string;
   account_phone: string;
   company_name: string;
-  licenses?: string | null;
-  certificates?: string | null;
   account_password: string;
 }
 
@@ -129,7 +129,7 @@ export interface TenderEntity {
   title: string;
   domain_id: number;
   project_description?: string;
-  city?: string;
+  city_id?: number;
   created_at?: string;
   submit_deadline?: string;
   quires_deadline?: string;
@@ -140,12 +140,15 @@ export interface TenderEntity {
   tender_coordinator?: string;
   coordinator_email?: string;
   coordinator_phone?: string;
+  expected_budget?: number;
   file1?: Blob | null;
   file2?: Blob | null;
   // Related data
   domain_name?: string;
   buyer_name?: string;
   buyer_company?: string;
+  city_name?: string;
+  region_name?: string;
   sub_domains?: SubDomain[];
 }
 

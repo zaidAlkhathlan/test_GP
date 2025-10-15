@@ -93,7 +93,7 @@ export default function TenderOffers() {
         commercialRecord: proposal.supplier_commercial_record,
         phone: proposal.supplier_phone,
         city: proposal.supplier_city,
-        industry: proposal.supplier_domain_name || 'غير محدد',
+        industry: proposal.supplier_domain_name || 'خطأ في التحميل',
         licenses: proposal.licenses || [],
         certs: proposal.certificates || [],
         contact: { 
@@ -101,7 +101,7 @@ export default function TenderOffers() {
           email: proposal.supplier_email, 
           mobile: proposal.supplier_account_phone?.toString() || proposal.supplier_phone 
         },
-        registeredOnPlatformYears: 'غير محدد' // You can calculate this based on supplier creation date
+        registeredOnPlatformYears: 'خطأ في التحميل' // You can calculate this based on supplier creation date
       }
     };
   };
@@ -164,7 +164,7 @@ export default function TenderOffers() {
                   <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold">{tenderInfo?.tender?.title || 'المناقصة'}</h2>
+              <h2 className="text-xl font-semibold">{tenderInfo?.tender?.title || 'خطأ في تحميل العنوان'}</h2>
               {/* Debug info - remove this later */}
               <div className="text-xs text-gray-500 mt-2">
                 Debug: Budget={tenderInfo?.tender?.expected_budget}, Deadline={tenderInfo?.tender?.submit_deadline}
@@ -189,7 +189,7 @@ export default function TenderOffers() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500 mb-1">
-                  {tenderInfo?.tender?.submit_deadline ? new Date(tenderInfo.tender.submit_deadline).toLocaleDateString('ar-SA') : 'غير محدد'}
+                  {tenderInfo?.tender?.submit_deadline ? new Date(tenderInfo.tender.submit_deadline).toLocaleDateString('ar-SA') : 'خطأ في التحميل'}
                 </p>
                 <p className="font-semibold">تاريخ الانتهاء</p>
               </div>
@@ -202,7 +202,7 @@ export default function TenderOffers() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500 mb-1">
-                  {tenderInfo?.tender?.expected_budget ? `${tenderInfo.tender.expected_budget.toLocaleString()} ريال` : 'غير محدد'}
+                  {tenderInfo?.tender?.expected_budget ? `${tenderInfo.tender.expected_budget.toLocaleString()} ريال` : 'خطأ في التحميل'}
                 </p>
                 <p className="font-semibold">ميزانية المناقصة</p>
               </div>

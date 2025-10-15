@@ -14,9 +14,9 @@ interface Inquiry {
 export default function Quires() {
   const { id } = useParams();
   const [inquiries, setInquiries] = useState<Inquiry[]>([
-    { id: 'q1', supplier: 'شركة الفارس', message: 'هل يمكن تمديد الموعد أسبوعاً؟', time: '10:05 AM', answered: true, answer: 'نعم، تم تمديد الموعد أسبوعاً إضافياً. الموعد الجديد هو 15/08/2025' },
-    { id: 'q2', supplier: 'مؤسسة النور', message: 'هل تقبلون عروضاً بنظام الدفع على أقساط؟', time: '09:20 AM', answered: true, answer: 'نعم، نقبل نظام الدفع على أقساط بحد أقصى 3 أقساط متساوية' },
-    { id: 'q3', supplier: 'الورشة المتحدة', message: 'ما هو حجم الموقع المراد بناؤه؟', time: '08:12 AM', answered: true, answer: 'مساحة الموقع 500 متر مربع، وسيتم توفير المخططات التفصيلية لاحقاً' }
+    { id: 'q1', supplier: 'خطأ في تحميل اسم الشركة', message: 'خطأ في تحميل الرسالة', time: 'خطأ في الوقت', answered: true, answer: 'خطأ في تحميل الإجابة' },
+    { id: 'q2', supplier: 'خطأ في تحميل اسم الشركة', message: 'خطأ في تحميل الرسالة', time: 'خطأ في الوقت', answered: true, answer: 'خطأ في تحميل الإجابة' },
+    { id: 'q3', supplier: 'خطأ في تحميل اسم الشركة', message: 'خطأ في تحميل الرسالة', time: 'خطأ في الوقت', answered: true, answer: 'خطأ في تحميل الإجابة' }
   ]);
 
   const [reply, setReply] = useState('');

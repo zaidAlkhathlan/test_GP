@@ -168,7 +168,7 @@ export default function SupplierHomePage() {
           <div className="col-span-12 lg:col-span-3 space-y-4">
             <div className="bg-white rounded-lg p-4 shadow-sm text-right">
               <h3 className="text-xs text-gray-600 mb-1">توقعات الذكاء الاصطناعي</h3>
-              <div className="text-2xl font-bold text-tawreed-green mb-1">92.1%</div>
+              <div className="text-2xl font-bold text-tawreed-green mb-1">خطأ في التحميل</div>
               <p className="text-xs text-gray-500">بناء على نموذج إحصائي عالي الدقة</p>
             </div>
             
@@ -196,18 +196,18 @@ export default function SupplierHomePage() {
               
               <p className="text-gray-600 text-sm mb-6">بناء على ملفك التعريفي وتخصصاتك، وجدنا</p>
               
-              <div className="text-3xl font-bold text-tawreed-green mb-6">1 فرصة مناسبة لك</div>
+              <div className="text-3xl font-bold text-tawreed-green mb-6">خطأ في تحميل الفرص</div>
             </div>
 
             {/* Tender Card */}
             <TenderCard
               tender={{
                 id: "1",
-                title: "بناء ورشة سيارات",
+                title: "خطأ في تحميل العنوان",
                 company: "مؤسسة أعمار المنشآت",
                 category: "مقاولات عامة المباني",
                 subDomains: ["الإنشاء", "الإنشاءات العامة", "الهندسة"],
-                location: "منطقة الرياض",
+                location: "خطأ في تحميل الموقع",
                 offerDeadline: "2025-08-04",
                 inquiryDeadline: "2025-08-04",
                 remainingDays: 15,
@@ -216,7 +216,7 @@ export default function SupplierHomePage() {
                 referenceNumber: "2507380100454",
                 publishDate: "2025-8-1",
                 status: "active",
-                description: "مناقصة لبناء ورشة سيارات حديثة مع جميع التجهيزات اللازمة"
+                description: "خطأ في تحميل الوصف"
               }}
               userType="supplier"
               showActions={true}
@@ -259,7 +259,7 @@ export default function SupplierHomePage() {
                   title: "تطوير موقع إلكتروني",
                   company: "مؤسسة تقنيات الويب",
                   category: "تطوير المواقع",
-                  location: "منطقة الرياض",
+                  location: "خطأ في تحميل الموقع",
                   offerDeadline: "2025-09-20",
                   inquiryDeadline: "2025-09-15",
                   remainingDays: 30,

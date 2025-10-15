@@ -7,7 +7,7 @@ export const createSupplier: RequestHandler = (req, res) => {
     commercial_registration_number,
     commercial_phone_number,
     domains_id,
-    city,
+    city_id,
     logo,
     account_name,
     account_email,
@@ -21,7 +21,7 @@ export const createSupplier: RequestHandler = (req, res) => {
 
   // Validate required fields
   if (!commercial_registration_number || !commercial_phone_number || !domains_id || 
-      !city || !logo || !account_name || !account_email || !account_phone || 
+      !city_id || !logo || !account_name || !account_email || !account_phone || 
       !company_name || !account_password) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -33,7 +33,7 @@ export const createSupplier: RequestHandler = (req, res) => {
   db.run(
     `INSERT INTO Supplier (
       Commercial_registration_number, Commercial_Phone_number, domains_id, 
-      created_at, City, updated_at, Logo, Account_name, Account_email, 
+      created_at, city_id, updated_at, Logo, Account_name, Account_email, 
       Account_phone, company_name, Account_password
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
@@ -41,7 +41,7 @@ export const createSupplier: RequestHandler = (req, res) => {
       commercial_phone_number,
       domains_id,
       currentTime,
-      city,
+      city_id,
       currentTime,
       logo,
       account_name,
@@ -147,9 +147,13 @@ export const getSuppliers: RequestHandler = (req, res) => {
   db.all(
     `SELECT 
       s.*,
-      d.Name as domain_name
+      d.Name as domain_name,
+      c.name as city_name,
+      r.name as region_name
      FROM Supplier s
      LEFT JOIN domains d ON s.domains_id = d.ID
+     LEFT JOIN City c ON s.city_id = c.id
+     LEFT JOIN Region r ON c.region_id = r.id
      ORDER BY s.created_at DESC`,
     [],
     (err, rows) => {
@@ -171,9 +175,13 @@ export const getSupplierById: RequestHandler = (req, res) => {
   db.get(
     `SELECT 
       s.*,
-      d.Name as domain_name
+      d.Name as domain_name,
+      c.name as city_name,
+      r.name as region_name
      FROM Supplier s
      LEFT JOIN domains d ON s.domains_id = d.ID
+     LEFT JOIN City c ON s.city_id = c.id
+     LEFT JOIN Region r ON c.region_id = r.id
      WHERE s.ID = ?`,
     [id],
     (err, row) => {
@@ -259,7 +267,7 @@ export const updateSupplier: RequestHandler = (req, res) => {
     'Commercial_registration_number',
     'Commercial_Phone_number',
     'domains_id',
-    'City',
+    'city_id',
     'Logo',
     'Account_name',
     'Account_email',
@@ -273,7 +281,7 @@ export const updateSupplier: RequestHandler = (req, res) => {
     const dbFieldMap: { [key: string]: string } = {
       'commercial_registration_number': 'Commercial_registration_number',
       'commercial_phone_number': 'Commercial_Phone_number',
-      'city': 'City',
+      'city_id': 'city_id',
       'logo': 'Logo',
       'account_name': 'Account_name',
       'account_email': 'Account_email',

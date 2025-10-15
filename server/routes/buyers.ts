@@ -11,34 +11,37 @@ export const createBuyer: RequestHandler = (req, res) => {
   // Use the run method with the database wrapper
   console.log("🗄️ Attempting to insert buyer into database...");
   
+  // Note: Need to update frontend to send city_id instead of city text
+  const currentTime = new Date().toISOString();
+  
   db.run(`
     INSERT INTO Buyer (
-      commercial_registration_number,
-      commercial_phone_number,
-      industry,
+      Commercial_registration_number,
+      Commercial_Phone_number,
+      domains_id,
       company_name,
-      city,
-      logo,
-      account_name,
-      account_email,
-      account_phone,
-      account_password,
-      licenses,
-      certificates
+      city_id,
+      Logo,
+      Account_name,
+      Account_email,
+      Account_phone,
+      Account_password,
+      created_at,
+      updated_at
     ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
   `, [
     b.commercial_registration_number,
     b.commercial_phone_number,
-    b.industry,
+    b.domains_id || 1, // Default to first domain if not provided
     b.company_name,
-    b.city,
+    b.city_id || 1, // Default to first city if not provided
     b.logo || null,
     b.account_name,
     b.account_email,
     b.account_phone,
     b.account_password,
-    b.licenses || null,
-    b.certificates || null
+    currentTime,
+    currentTime
   ], function (this: any, err: Error | null) {
     if (err) {
       console.error("❌ Database insert error:", err);
@@ -79,15 +82,15 @@ export const updateBuyer: RequestHandler = (req, res) => {
 
   // Build dynamic SQL update query
   const allowedFields = [
-    'commercial_registration_number',
-    'commercial_phone_number', 
-    'industry',
+    'Commercial_registration_number',
+    'Commercial_Phone_number', 
+    'domains_id',
     'company_name',
-    'city',
-    'logo',
-    'account_name',
-    'account_email',
-    'account_phone'
+    'city_id',
+    'Logo',
+    'Account_name',
+    'Account_email',
+    'Account_phone'
   ];
 
   const fieldsToUpdate = Object.keys(updateData).filter(key => allowedFields.includes(key));
@@ -121,8 +124,17 @@ export const updateBuyer: RequestHandler = (req, res) => {
 
     console.log("✅ Buyer updated successfully");
     
-    // Return updated buyer data
-    db.get("SELECT * FROM Buyer WHERE ID = ?", [id], (err: Error | null, row: any) => {
+    // Return updated buyer data with city and region info
+    db.get(`SELECT 
+      b.*, 
+      c.name as city_name, 
+      r.name as region_name,
+      d.Name as domain_name
+    FROM Buyer b
+    LEFT JOIN City c ON b.city_id = c.id
+    LEFT JOIN Region r ON c.region_id = r.id
+    LEFT JOIN domains d ON b.domains_id = d.ID
+    WHERE b.ID = ?`, [id], (err: Error | null, row: any) => {
       if (err) {
         console.error("❌ Error fetching updated buyer:", err);
         res.status(500).json({ error: "Failed to fetch updated buyer" });
@@ -131,7 +143,7 @@ export const updateBuyer: RequestHandler = (req, res) => {
       
       if (row) {
         // Do not return the stored password
-        delete row.account_password;
+        delete row.Account_password;
       }
       
       console.log("📤 Sending updated buyer response:", row);

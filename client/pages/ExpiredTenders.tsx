@@ -110,7 +110,7 @@ export default function ExpiredTenders() {
 
   const sampleTenders = Array.from({ length: 3 }).map((_, i) => ({
     id: `e${i + 1}`,
-    title: i === 2 ? 'إنشاء بوابة أمنية على طريق السلامة بخشم النجار' : 'بناء ورشة سيارات',
+    title: i === 2 ? 'إنشاء بوابة أمنية على طريق السلامة بخشم النجار' : 'خطأ في تحميل العنوان',
     org: 'مؤسسة نماء للمشتريات',
     endDate: '2025-08-04',
     offers: 8,
@@ -194,7 +194,7 @@ export default function ExpiredTenders() {
                     <div className="mt-4 flex items-center justify-between">
                       <div className="text-right">
                         <p className="text-sm">قيمة العطاء</p>
-                        <p className="font-bold">{tender.budget || 'غير محدد'}</p>
+                        <p className="font-bold">{tender.budget || 'خطأ في التحميل'}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Link to={`/tender/${tender.id}`} className="px-3 py-1 bg-white border rounded">التفاصيل</Link>

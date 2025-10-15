@@ -64,7 +64,7 @@ export default function TenderDetails() {
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'غير محدد';
+    if (!dateString) return 'خطأ في التحميل';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', {
       year: 'numeric',
@@ -133,7 +133,7 @@ export default function TenderDetails() {
         <div className="bg-white rounded-lg shadow-sm p-8 mb-8" dir="rtl">
           <div className="flex items-center justify-between mb-8">
             <div className="text-right">
-              <h2 className="text-2xl font-semibold text-green-700 mb-2">{tender.title || 'بناء ورشة سيارات'}</h2>
+              <h2 className="text-2xl font-semibold text-green-700 mb-2">{tender.title || 'خطأ في تحميل العنوان'}</h2>
             </div>
             <div className="flex gap-3">
               {userType === 'buyer' ? (
@@ -176,7 +176,7 @@ export default function TenderDetails() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-4 border-b border-gray-100">
                   <span className="text-gray-500">الرقم المرجعي</span>
-                  <span className="text-gray-900 font-medium">#{tender.reference_number || '250739010054'}</span>
+                  <span className="text-gray-900 font-medium">#{tender.reference_number || 'خطأ في التحميل'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center py-4 border-b border-gray-100">
@@ -185,13 +185,18 @@ export default function TenderDetails() {
                 </div>
                 
                 <div className="flex justify-between items-center py-4 border-b border-gray-100">
+                  <span className="text-gray-500">المنطقة</span>
+                  <span className="text-gray-900 font-medium">{tender.region_name || 'خطأ في تحميل المنطقة'}</span>
+                </div>
+                
+                <div className="flex justify-between items-center py-4 border-b border-gray-100">
                   <span className="text-gray-500">المدينة</span>
-                  <span className="text-gray-900 font-medium">{tender.city || 'الرياض'}</span>
+                  <span className="text-gray-900 font-medium">{tender.city_name || 'خطأ في التحميل'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center py-4 border-b border-gray-100">
                   <span className="text-gray-500">مدة التنفيذ</span>
-                  <span className="text-gray-900 font-medium">{tender.contract_time || 'غير محدد'}</span>
+                  <span className="text-gray-900 font-medium">{tender.contract_time || 'خطأ في التحميل'}</span>
                 </div>
                 
                 <div className="flex justify-between items-center py-4 border-b border-gray-100">
@@ -203,7 +208,7 @@ export default function TenderDetails() {
                         {tender.domain_name}
                       </span>
                     ) : (
-                      <span className="text-gray-500 text-sm">غير محدد</span>
+                      <span className="text-gray-500 text-sm">خطأ في التحميل</span>
                     )}
                   </div>
                 </div>

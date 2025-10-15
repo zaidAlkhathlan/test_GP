@@ -10,6 +10,7 @@ import { loginSupplier } from "./routes/supplier-auth";
 import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
+import { getRegions, getCitiesByRegion, getAllCities, getCityById } from './routes/locations';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
 import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier, downloadProposalFile, getProposalDetails } from './routes/proposals';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
@@ -90,6 +91,12 @@ export function createServer() {
   app.get("/api/domains", getDomains);
   app.get("/api/domains/:domainId/sub-domains", getSubDomainsByDomain);
   app.get("/api/sub-domains", getAllSubDomains);
+  
+  // Location routes
+  app.get("/api/regions", getRegions);
+  app.get("/api/regions/:regionId/cities", getCitiesByRegion);
+  app.get("/api/cities", getAllCities);
+  app.get("/api/cities/:id", getCityById);
   
   // Tender routes
   app.get('/api/tenders', getTenders);
