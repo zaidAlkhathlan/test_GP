@@ -175,49 +175,224 @@ export const getTenderStatusStats: RequestHandler = (req, res) => {
 };
 
 /**
- * Get tenders by specific status
+ * Award tender to winning supplier and mark as FINISHED
  */
-export const getTendersByStatus: RequestHandler = (req, res) => {
-  const { status } = req.params;
+export const awardTender: RequestHandler = (req, res) => {
+  const { tenderId } = req.params;
+  const { supplierId, proposalId } = req.body;
+
+  console.log(`🏆 Awarding tender ${tenderId} to supplier ${supplierId}`);
+
+  if (!tenderId || !supplierId || !proposalId) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields: tenderId, supplierId, proposalId"
+    });
+  }
+
+  // Update tender with winner and mark as finished
+  const updateSql = `
+    UPDATE tender 
+    SET 
+      status_id = ?,
+      supplier_win_id = ?,
+      finished_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  db.run(updateSql, [TENDER_STATUS.FINISHED, supplierId, tenderId], function(err) {
+    if (err) {
+      console.error("❌ Error awarding tender:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Database error while awarding tender"
+      });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Tender not found"
+      });
+    }
+
+    console.log(`✅ Successfully awarded tender ${tenderId} to supplier ${supplierId}`);
+    
+    // Get updated tender info for response
+    const selectSql = `
+      SELECT 
+        t.id,
+        t.title,
+        t.supplier_win_id,
+        t.status_id,
+        s.name as status_name,
+        t.finished_at,
+        sup.company_name as winner_company_name
+      FROM tender t
+      LEFT JOIN status s ON s.id = t.status_id
+      LEFT JOIN Supplier sup ON sup.ID = t.supplier_win_id
+      WHERE t.id = ?
+    `;
+
+    db.get(selectSql, [tenderId], (err, row) => {
+      if (err) {
+        console.error("❌ Error fetching updated tender:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Tender awarded but failed to fetch updated info"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Tender successfully awarded",
+        data: {
+          tender: row,
+          awardedAt: new Date().toISOString()
+        }
+      });
+    });
+  });
+};
+
+/**
+ * Get awarded supplier details for a specific tender
+ */
+export const getAwardedSupplier: RequestHandler = (req, res) => {
+  const { tenderId } = req.params;
   
-  console.log(`🔍 Getting tenders with status: ${status}`);
+  console.log(`🏆 Getting awarded supplier for tender ${tenderId}`);
 
-  // Map status name to ID
-  const statusId = status === 'open' ? TENDER_STATUS.OPEN :
-                   status === 'awarding' ? TENDER_STATUS.AWARDING :
-                   status === 'finished' ? TENDER_STATUS.FINISHED : null;
-
-  if (!statusId) {
-    return res.status(400).json({ 
-      error: "حالة غير صالحة. الحالات المتاحة: open, awarding, finished" 
+  if (!tenderId || isNaN(Number(tenderId))) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid tender ID"
     });
   }
 
   const sql = `
     SELECT 
-      t.*,
+      t.id as tender_id,
+      t.title as tender_title,
+      t.status_id,
+      t.finished_at,
+      t.supplier_win_id,
+      s.company_name,
+      s.Commercial_registration_number as commercial_register,
+      s.Commercial_Phone_number as phone,
+      s.Account_email as email,
+      s.Account_name as contact_person,
+      s.city_id,
+      c.name as city_name,
+      r.name as region_name,
+      d.Name as domain_name
+    FROM tender t
+    LEFT JOIN Supplier s ON s.ID = t.supplier_win_id
+    LEFT JOIN City c ON s.city_id = c.id
+    LEFT JOIN Region r ON c.region_id = r.id
+    LEFT JOIN domains d ON t.domain_id = d.ID
+    WHERE t.id = ? AND t.status_id = ? AND t.supplier_win_id IS NOT NULL
+  `;
+
+  db.get(sql, [tenderId, TENDER_STATUS.FINISHED], (err, row) => {
+    if (err) {
+      console.error("❌ Error fetching awarded supplier:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Database error while fetching awarded supplier"
+      });
+    }
+
+    if (!row) {
+      return res.status(404).json({
+        success: false,
+        message: "No awarded supplier found for this tender"
+      });
+    }
+
+    console.log(`✅ Found awarded supplier: ${row.company_name}`);
+    
+    res.json({
+      success: true,
+      data: {
+        tender: {
+          id: row.tender_id,
+          title: row.tender_title,
+          status_id: row.status_id,
+          finished_at: row.finished_at,
+          domain_name: row.domain_name
+        },
+        supplier: {
+          id: row.supplier_win_id,
+          company_name: row.company_name,
+          commercial_register: row.commercial_register,
+          phone: row.phone,
+          email: row.email,
+          contact_person: row.contact_person,
+          city_name: row.city_name,
+          region_name: row.region_name
+        }
+      }
+    });
+  });
+};
+
+/**
+ * Get tenders by specific status ID
+ */
+export const getTendersByStatus: RequestHandler = (req, res) => {
+  const { statusId } = req.params;
+  
+  if (!statusId || isNaN(Number(statusId))) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status ID"
+    });
+  }
+
+  const statusIdNum = Number(statusId);
+  
+  // Validate status ID
+  if (![1, 2, 3].includes(statusIdNum)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status ID. Must be 1 (OPEN), 2 (AWARDING), or 3 (FINISHED)"
+    });
+  }
+
+  const sql = `
+    SELECT 
+      t.id,
+      t.title,
+      t.status_id,
       s.name AS status_name,
-      b.company_name AS buyer_company_name,
-      d.Name AS domain_name
+      t.submit_deadline,
+      t.finished_at,
+      t.created_at,
+      t.expected_budget,
+      b.company_name AS buyer_company_name
     FROM tender t
     LEFT JOIN status s ON s.id = t.status_id
-    LEFT JOIN Buyer b ON b.ID = t.buyer_id  
-    LEFT JOIN domains d ON d.ID = t.domain_id
+    LEFT JOIN Buyer b ON b.ID = t.buyer_id
     WHERE t.status_id = ?
     ORDER BY t.created_at DESC
   `;
 
-  db.all(sql, [statusId], (err: Error | null, rows: any[]) => {
+  db.all(sql, [statusIdNum], (err, rows) => {
     if (err) {
-      console.error("❌ Database error getting tenders by status:", err);
-      return res.status(500).json({ 
-        error: "فشل في استرداد المناقصات",
-        details: err.message 
+      console.error("❌ Error fetching tenders by status:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Database error"
       });
     }
 
-    console.log(`✅ Found ${rows?.length || 0} tenders with status ${status}`);
-    res.json(rows || []);
+    res.json({
+      success: true,
+      data: rows,
+      count: rows.length,
+      status: STATUS_NAMES[statusIdNum as keyof typeof STATUS_NAMES]
+    });
   });
 };
 

@@ -49,6 +49,7 @@ const App = () => (
           <Route path="/tender/:id/chat" element={<SupplierChat />} />
           <Route path="/tender/:id/submit-offer" element={<SubmitProposal />} />
           <Route path="/tender/:id/award/:offerId" element={<AwardedSupplier />} />
+          <Route path="/awarded-supplier/:id" element={<AwardedSupplier />} />
           <Route path="/supplier/signin" element={<SupplierSignIn />} />
           <Route path="/supplier/home" element={<SupplierHome />} />
           <Route path="/available-tenders" element={<AvailableTenders />} />

@@ -32,6 +32,8 @@ export default function TenderOffers() {
   const [loading, setLoading] = useState(true);
   const [tenderInfo, setTenderInfo] = useState<any>(null);
   const [fileModalProposal, setFileModalProposal] = useState<any | null>(null);
+  const [showConfirmAward, setShowConfirmAward] = useState<any | null>(null);
+  const [awarding, setAwarding] = useState(false);
 
   // Debug effect to track tenderInfo state changes
   useEffect(() => {
@@ -109,6 +111,7 @@ export default function TenderOffers() {
         // Smart summary will be populated by external API
       ],
       supplier: {
+        id: proposal.supplier_id, // Add the supplier ID from the proposal
         name: proposal.supplier_company_name || proposal.company_name || 'اسم الشركة غير متوفر',
         commercialRecord: proposal.supplier_commercial_record || 'غير متوفر',
         phone: proposal.supplier_phone || proposal.supplier_account_phone || 'غير متوفر',
@@ -157,6 +160,72 @@ export default function TenderOffers() {
       console.error('Error downloading file:', error);
       alert('حدث خطأ أثناء تحميل الملف');
     }
+  };
+
+  const handleAwardTender = (offer: any) => {
+    setShowConfirmAward(offer);
+  };
+
+  const confirmAward = async () => {
+    if (!showConfirmAward || !id) return;
+    
+    setAwarding(true);
+    
+    // Debug: Log the data we're about to send
+    console.log('Award data:', {
+      tenderId: id,
+      supplierId: showConfirmAward.supplier?.id,
+      proposalId: showConfirmAward.id,
+      fullOffer: showConfirmAward
+    });
+
+    try {
+      const requestBody = {
+        supplierId: showConfirmAward.supplier.id,
+        proposalId: showConfirmAward.id
+      };
+
+      console.log('Sending award request:', requestBody);
+
+      const response = await fetch(`/api/tenders/${id}/award`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Award successful:', result);
+        alert('تم اعتماد المورد الفائز بنجاح!');
+        setShowConfirmAward(null);
+        
+        // Refresh the page to show updated status
+        window.location.reload();
+      } else {
+        const errorText = await response.text();
+        console.error('Award failed:', errorText);
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch (e) {
+          error = { message: errorText };
+        }
+        alert(`فشل في اعتماد المورد: ${error.message || 'خطأ غير معروف'}`);
+      }
+    } catch (error) {
+      console.error('Error awarding tender:', error);
+      alert('حدث خطأ أثناء اعتماد المورد');
+    } finally {
+      setAwarding(false);
+    }
+  };
+
+  const cancelAward = () => {
+    setShowConfirmAward(null);
   };
 
   return (
@@ -410,17 +479,31 @@ export default function TenderOffers() {
                   </button>
                 </div>
 
-                {/* Award Button */}
+                {/* Award Button or View Awarded Supplier Button */}
                 <div className="p-4 bg-white">
-                  <button
-                    className="w-full bg-tawreed-green text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-                    onClick={() => navigate(`/tender/${id}/award/${offer.id}`, { state: { supplier: offer.supplier, proposalId: offer.id } })}
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    اعتماد المورد الفائز
-                  </button>
+                  {tenderInfo?.tender?.status_id === 3 ? (
+                    // Show "View Awarded Supplier" button if tender is finished
+                    <button
+                      className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                      onClick={() => navigate(`/awarded-supplier/${id}`)}
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      عرض المورد الفائز
+                    </button>
+                  ) : (
+                    // Show "Award Tender" button if tender is not finished
+                    <button
+                      className="w-full bg-tawreed-green text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                      onClick={() => handleAwardTender(offer)}
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      اعتماد المورد الفائز
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -707,6 +790,99 @@ export default function TenderOffers() {
                     </div>
                     <span className="font-medium text-gray-900">{modalSupplier.registeredOnPlatformYears}</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Award Confirmation Modal */}
+        {showConfirmAward && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={cancelAward}></div>
+            <div className="relative bg-white w-full max-w-md rounded-lg shadow-2xl overflow-hidden" dir="rtl">
+              
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold">تأكيد اعتماد المورد الفائز</h3>
+                  </div>
+                  <button 
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors" 
+                    onClick={cancelAward}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    هل أنت متأكد من اعتماد هذا المورد؟
+                  </h4>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-600 mb-2">المورد المختار:</p>
+                    <p className="font-semibold text-gray-900">{showConfirmAward.company}</p>
+                    <p className="text-sm text-gray-600 mt-2">إجمالي العرض: <span className="font-bold text-green-600">{showConfirmAward.amount}</span></p>
+                  </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-semibold text-yellow-800">تنبيه هام</span>
+                    </div>
+                    <p className="text-sm text-yellow-700">
+                      سيتم إغلاق المناقصة نهائياً وتغيير حالتها إلى "مكتملة". لا يمكن التراجع عن هذا الإجراء.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={cancelAward}
+                    className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={confirmAward}
+                    disabled={awarding}
+                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {awarding ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        جاري الاعتماد...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        تأكيد الاعتماد
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

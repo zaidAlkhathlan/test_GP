@@ -1,6 +1,6 @@
 import { Calendar, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Tender } from "@shared/api";
 import clsx from "clsx";
 import TenderStatusTag, { mapDatabaseStatus } from "@/components/ui/TenderStatusTag";
@@ -20,8 +20,12 @@ export default function TenderCard({
   onViewOffers,
   className = "",
 }: TenderCardProps) {
+  const navigate = useNavigate();
   const submissionProgress = Math.min(100, (tender.remainingDays / 30) * 100);
   const inquiryProgress = Math.min(100, (tender.remainingInquiryDays / 30) * 100);
+
+  // Check if tender is finished (status_id = 3)
+  const isTenderFinished = tender.status_id === 3;
 
   return (
     <div className={clsx("w-full rounded-xl border border-gray-200 bg-white shadow-sm p-8 min-h-[420px]", className)} dir="rtl">
@@ -103,12 +107,24 @@ export default function TenderCard({
             </Button>
           </Link>
           {userType === "buyer" ? (
-            <Button
-              className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
-              onClick={() => onViewOffers && onViewOffers(tender.id)}
-            >
-              العروض المقدمة
-            </Button>
+            isTenderFinished ? (
+              <Button
+                className="h-8 px-4 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+                onClick={() => navigate(`/awarded-supplier/${tender.id}`)}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                المورد الفائز
+              </Button>
+            ) : (
+              <Button
+                className="h-8 px-4 rounded text-sm bg-[#28A745] text-white hover:bg-[#28A745]/90"
+                onClick={() => onViewOffers && onViewOffers(tender.id)}
+              >
+                العروض المقدمة
+              </Button>
+            )
           ) : (
             <Link to={`/tender/${tender.id}/submit-offer`}>
               <Button

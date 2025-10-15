@@ -13,7 +13,7 @@ import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/do
 import { getRegions, getCitiesByRegion, getAllCities, getCityById } from './routes/locations';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
 import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier, downloadProposalFile, getProposalDetails } from './routes/proposals';
-import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus } from './routes/tender-status';
+import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus, awardTender, getAwardedSupplier } from './routes/tender-status';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 import { 
@@ -113,12 +113,14 @@ export function createServer() {
   app.delete('/api/tenders/:id', deleteTender);
   app.get('/api/domains/:domainId/tenders', getTendersByDomain);
   
-  // Tender status management routes
+    // Tender status routes
   app.get('/api/tenders-with-status', getTendersWithStatus);
-  app.post('/api/tenders/update-expired', updateExpiredTenders);
+  app.post('/api/update-expired-tenders', updateExpiredTenders);
   app.put('/api/tenders/:id/finish', finishTender);
   app.get('/api/tender-status-stats', getTenderStatusStats);
-  app.get('/api/tenders/status/:status', getTendersByStatus);
+  app.get('/api/tenders/status/:statusId', getTendersByStatus);
+  app.post('/api/tenders/:tenderId/award', awardTender);
+  app.get('/api/tenders/:tenderId/awarded-supplier', getAwardedSupplier);
   
   // Proposals routes
   app.post('/api/tenders/:tenderId/proposals', submitProposalWithFiles);

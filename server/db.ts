@@ -253,6 +253,11 @@ export async function initDatabase() {
     ADD COLUMN finished_at TEXT;
   `;
 
+  const addSupplierWinIdToTender = `
+    ALTER TABLE tender
+    ADD COLUMN supplier_win_id INTEGER;
+  `;
+
   // Tender table and relationships
   const createTenderTable = `
     CREATE TABLE IF NOT EXISTS tender (
@@ -460,6 +465,17 @@ export async function initDatabase() {
         console.log("✅ finished_at column already exists in tender table");
       } else {
         console.error("❌ Error adding finished_at column:", error);
+      }
+    }
+    
+    try {
+      realDb.run(addSupplierWinIdToTender);
+      console.log("✅ Added supplier_win_id column to tender table");
+    } catch (error: any) {
+      if (error.message.includes('duplicate column name')) {
+        console.log("✅ supplier_win_id column already exists in tender table");
+      } else {
+        console.error("❌ Error adding supplier_win_id column:", error);
       }
     }
     
