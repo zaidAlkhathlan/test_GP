@@ -152,11 +152,13 @@ export const getProposalsForTender: RequestHandler = (req, res) => {
         s.Commercial_registration_number as supplier_commercial_record,
         s.Commercial_Phone_number as supplier_phone,
         s.Account_phone as supplier_account_phone,
-        s.City as supplier_city,
+        s.city_id as supplier_city_id,
+        c.name as supplier_city,
         d.Name as supplier_domain_name
       FROM Proposal p
       JOIN Supplier s ON p.supplier_id = s.ID
       LEFT JOIN domains d ON s.domains_id = d.ID
+      LEFT JOIN City c ON s.city_id = c.id
       WHERE p.tender_id = ?
       ORDER BY p.created_at DESC
     `;

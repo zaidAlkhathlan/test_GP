@@ -49,19 +49,24 @@ export default function TenderOffers() {
         const proposalsResponse = await fetch(`/api/tenders/${id}/proposals`);
         if (proposalsResponse.ok) {
           const proposalsData = await proposalsResponse.json();
-          setProposals(proposalsData.data || []);
+          console.log('Proposals API response:', proposalsData);
+          
+          if (proposalsData.success && proposalsData.data) {
+            setProposals(proposalsData.data);
+          } else {
+            console.warn('No proposals data in response:', proposalsData);
+            setProposals([]);
+          }
+        } else {
+          console.error('Failed to fetch proposals:', proposalsResponse.status);
+          setProposals([]);
         }
 
         // Fetch tender details
         const tenderResponse = await fetch(`/api/tenders/${id}`);
-        console.log('Tender response status:', tenderResponse.status);
         if (tenderResponse.ok) {
           const tenderData = await tenderResponse.json();
-          console.log('Full tender data received:', JSON.stringify(tenderData, null, 2));
-          console.log('Expected budget field:', tenderData.tender?.expected_budget);
-          console.log('Submit deadline field:', tenderData.tender?.submit_deadline);
-          console.log('All tender keys:', Object.keys(tenderData));
-          console.log('All nested tender keys:', Object.keys(tenderData.tender || {}));
+          console.log('Tender API response:', tenderData);
           setTenderInfo(tenderData);
         } else {
           console.error('Failed to fetch tender data:', tenderResponse.status);
@@ -69,6 +74,7 @@ export default function TenderOffers() {
         
       } catch (error) {
         console.error('Error fetching data:', error);
+        setProposals([]);
       } finally {
         setLoading(false);
       }
@@ -79,29 +85,44 @@ export default function TenderOffers() {
 
   // Transform proposal data to match the UI expectations
   const formatProposalForUI = (proposal: Proposal, index: number) => {
+    // Format the price properly
+    const formattedPrice = proposal.proposal_price 
+      ? `${Number(proposal.proposal_price).toLocaleString('ar-SA')} ريال`
+      : 'غير محدد';
+
+    // Format the date properly
+    const formattedDate = proposal.created_at 
+      ? new Date(proposal.created_at).toLocaleDateString('ar-SA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        })
+      : 'غير محدد';
+
     return {
       id: proposal.id.toString(),
-      company: proposal.supplier_company_name || proposal.company_name,
-      amount: `${proposal.proposal_price?.toLocaleString()} ريال`,
-      date: new Date(proposal.created_at).toLocaleDateString('ar-SA'),
+      company: proposal.supplier_company_name || proposal.company_name || 'اسم الشركة غير متوفر',
+      amount: formattedPrice,
+      date: formattedDate,
       status: 'قيد المراجعة', // Default status - you can enhance this based on your business logic
       summary: [
         // Smart summary will be populated by external API
       ],
       supplier: {
-        name: proposal.supplier_company_name || proposal.company_name,
-        commercialRecord: proposal.supplier_commercial_record,
-        phone: proposal.supplier_phone,
-        city: proposal.supplier_city,
-        industry: proposal.supplier_domain_name || 'خطأ في التحميل',
-        licenses: proposal.licenses || [],
-        certs: proposal.certificates || [],
+        name: proposal.supplier_company_name || proposal.company_name || 'اسم الشركة غير متوفر',
+        commercialRecord: proposal.supplier_commercial_record || 'غير متوفر',
+        phone: proposal.supplier_phone || proposal.supplier_account_phone || 'غير متوفر',
+        city: proposal.supplier_city || 'غير متوفر',
+        industry: proposal.supplier_domain_name || 'غير محدد',
+        licenses: Array.isArray(proposal.licenses) ? proposal.licenses : [],
+        certs: Array.isArray(proposal.certificates) ? proposal.certificates : [],
         contact: { 
-          name: proposal.supplier_account_name, 
-          email: proposal.supplier_email, 
-          mobile: proposal.supplier_account_phone?.toString() || proposal.supplier_phone 
+          name: proposal.supplier_account_name || 'غير متوفر', 
+          email: proposal.supplier_email || 'غير متوفر', 
+          mobile: proposal.supplier_account_phone?.toString() || proposal.supplier_phone || 'غير متوفر'
         },
-        registeredOnPlatformYears: 'خطأ في التحميل' // You can calculate this based on supplier creation date
+        registeredOnPlatformYears: 'جديد', // Default value - you can calculate this based on supplier creation date
+        additionalNotes: proposal.extra_description ? [proposal.extra_description] : [] // Additional notes from proposal
       }
     };
   };
@@ -165,10 +186,6 @@ export default function TenderOffers() {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold">{tenderInfo?.tender?.title || 'خطأ في تحميل العنوان'}</h2>
-              {/* Debug info - remove this later */}
-              <div className="text-xs text-gray-500 mt-2">
-                Debug: Budget={tenderInfo?.tender?.expected_budget}, Deadline={tenderInfo?.tender?.submit_deadline}
-              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -202,7 +219,9 @@ export default function TenderOffers() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500 mb-1">
-                  {tenderInfo?.tender?.expected_budget ? `${tenderInfo.tender.expected_budget.toLocaleString()} ريال` : 'خطأ في التحميل'}
+                  {tenderInfo?.tender?.expected_budget ? 
+                    `${Number(tenderInfo.tender.expected_budget).toLocaleString('ar-SA')} ريال` : 
+                    'غير محدد'}
                 </p>
                 <p className="font-semibold">ميزانية المناقصة</p>
               </div>
@@ -333,6 +352,44 @@ export default function TenderOffers() {
                       <p className="text-gray-400 text-xs">سيتم عرض التحليل الذكي عند ربط الـ API الخارجي</p>
                     </div>
                   )}
+                </div>
+
+                {/* Additional Notes Section */}
+                <div className="p-6 bg-gray-50 border-t">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <h5 className="font-semibold text-purple-900">الملاحظات الإضافية</h5>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {offer.supplier.additionalNotes && offer.supplier.additionalNotes.length > 0 ? (
+                      offer.supplier.additionalNotes.map((note, idx) => (
+                        <div key={idx} className="bg-white rounded-lg p-4 border border-purple-100">
+                          <div className="flex items-start gap-3">
+                            <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg className="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <span className="text-gray-700">{note}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 text-sm">لا توجد ملاحظات إضافية</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Files and Actions */}
