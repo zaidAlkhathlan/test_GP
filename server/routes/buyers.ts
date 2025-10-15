@@ -90,16 +90,52 @@ export const updateBuyer: RequestHandler = (req, res) => {
     'Logo',
     'Account_name',
     'Account_email',
-    'Account_phone'
+    'Account_phone',
+    'industry'
   ];
 
-  const fieldsToUpdate = Object.keys(updateData).filter(key => allowedFields.includes(key));
+  const fieldsToUpdate = Object.keys(updateData).filter(key => {
+    // Map frontend field names to database field names
+    const dbFieldMap: { [key: string]: string } = {
+      'commercial_registration_number': 'Commercial_registration_number',
+      'commercial_phone_number': 'Commercial_Phone_number',
+      'domains_id': 'domains_id',
+      'company_name': 'company_name',
+      'city_id': 'city_id',
+      'logo': 'Logo',
+      'account_name': 'Account_name',
+      'account_email': 'Account_email',
+      'account_phone': 'Account_phone',
+      'industry': 'industry'
+    };
+    
+    const dbField = dbFieldMap[key] || key;
+    return allowedFields.includes(dbField);
+  });
   
   if (fieldsToUpdate.length === 0) {
     return res.status(400).json({ error: 'No valid fields to update' });
   }
 
-  const setClause = fieldsToUpdate.map(field => `${field} = ?`).join(', ');
+  // Map field names and prepare values
+  const setClause = fieldsToUpdate.map(field => {
+    const dbFieldMap: { [key: string]: string } = {
+      'commercial_registration_number': 'Commercial_registration_number',
+      'commercial_phone_number': 'Commercial_Phone_number',
+      'domains_id': 'domains_id',
+      'company_name': 'company_name',
+      'city_id': 'city_id',
+      'logo': 'Logo',
+      'account_name': 'Account_name',
+      'account_email': 'Account_email',
+      'account_phone': 'Account_phone',
+      'industry': 'industry'
+    };
+    
+    const dbField = dbFieldMap[field] || field;
+    return `${dbField} = ?`;
+  }).join(', ');
+
   const values = fieldsToUpdate.map(field => updateData[field]);
   values.push(id); // Add id for WHERE clause
 
@@ -149,5 +185,43 @@ export const updateBuyer: RequestHandler = (req, res) => {
       console.log("📤 Sending updated buyer response:", row);
       res.json(row);
     });
+  });
+};
+
+// Get buyer by ID
+export const getBuyerById: RequestHandler = (req, res) => {
+  console.log("🔵 getBuyerById endpoint called");
+  const { id } = req.params;
+  
+  console.log("📖 Fetching buyer with ID:", id);
+  
+  // Return buyer data with city and region info
+  db.get(`SELECT 
+    b.*, 
+    c.name as city_name, 
+    r.name as region_name,
+    d.Name as domain_name
+  FROM Buyer b
+  LEFT JOIN City c ON b.city_id = c.id
+  LEFT JOIN Region r ON c.region_id = r.id
+  LEFT JOIN domains d ON b.domains_id = d.ID
+  WHERE b.ID = ?`, [id], (err: Error | null, row: any) => {
+    if (err) {
+      console.error("❌ Error fetching buyer:", err);
+      res.status(500).json({ error: "Failed to fetch buyer" });
+      return;
+    }
+    
+    if (!row) {
+      console.log("❌ No buyer found with ID:", id);
+      res.status(404).json({ error: "Buyer not found" });
+      return;
+    }
+    
+    // Do not return the stored password
+    delete row.Account_password;
+    
+    console.log("📤 Sending buyer response:", row);
+    res.json(row);
   });
 };

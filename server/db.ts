@@ -53,7 +53,7 @@ export async function initDatabase() {
       Commercial_Phone_number TEXT NOT NULL,
       domains_id INTEGER NOT NULL,
       created_at TIMESTAMP NOT NULL,
-      City TEXT NOT NULL,
+      city_id INTEGER NOT NULL,
       updated_at TIMESTAMP NOT NULL,
       Logo TEXT,
       Account_name TEXT NOT NULL,
@@ -61,7 +61,9 @@ export async function initDatabase() {
       Account_phone INTEGER NOT NULL,
       company_name TEXT NOT NULL,
       Account_password TEXT NOT NULL,
-      FOREIGN KEY (domains_id) REFERENCES domains(ID)
+      industry TEXT,
+      FOREIGN KEY (domains_id) REFERENCES domains(ID),
+      FOREIGN KEY (city_id) REFERENCES City(id)
     );
   `;
 

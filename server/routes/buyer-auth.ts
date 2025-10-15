@@ -83,11 +83,17 @@ export const loginBuyer: RequestHandler = (req, res) => {
       company_name: row.company_name,
       account_name: row.Account_name,
       account_email: row.Account_email,
+      account_phone: row.Account_phone,
+      commercial_registration_number: row.Commercial_registration_number,
+      commercial_phone_number: row.Commercial_Phone_number,
       city_id: row.city_id,
       city_name: row.city_name || 'خطأ في تحميل المدينة',
       region_name: row.region_name || 'خطأ في تحميل المنطقة',
       domains_id: row.domains_id,
-      domain_name: row.domain_name || 'خطأ في تحميل النشاط'
+      domain_name: row.domain_name || 'خطأ في تحميل النشاط',
+      logo: row.Logo,
+      industry: row.industry,
+      created_at: row.created_at
     };
 
     res.json({

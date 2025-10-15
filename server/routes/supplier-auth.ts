@@ -156,6 +156,8 @@ export const loginSupplier: RequestHandler = (req, res) => {
       commercial_registration_number: row.Commercial_registration_number,
       commercial_phone_number: row.Commercial_Phone_number,
       account_phone: row.Account_phone,
+      logo: row.Logo,
+      industry: row.industry,
       domain: row.domain_name || 'خطأ في تحميل النشاط',
       created_at: row.created_at
     };

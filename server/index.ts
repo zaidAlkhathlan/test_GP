@@ -4,7 +4,7 @@ import cors from "cors";
 import multer from "multer";
 import { handleDemo } from "./routes/demo";
 import { initDatabase } from "./db";
-import { createBuyer, updateBuyer } from "./routes/buyers";
+import { createBuyer, updateBuyer, getBuyerById } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
 import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
@@ -63,8 +63,8 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '10mb' })); // Increase limit for Base64 images
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Example API routes
   app.get("/api/ping", (_req, res) => {
@@ -76,6 +76,7 @@ export function createServer() {
   
   // Mount routes first, initialize DB in background
   app.post("/api/buyers", createBuyer);
+  app.get("/api/buyers/:id", getBuyerById);
   app.put("/api/buyers/:id", updateBuyer);
   app.post("/api/auth/login", loginBuyer);
   app.post("/api/auth/supplier/login", loginSupplier);
