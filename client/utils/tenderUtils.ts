@@ -43,6 +43,9 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
     remainingDays,
     remainingInquiryDays,
     status,
+    // Database status information
+    status_id: dbTender.status_id,
+    status_name: dbTender.status_name,
     description: dbTender.project_description,
     referenceNumber: String(dbTender.reference_number || dbTender.id),
     subDomains

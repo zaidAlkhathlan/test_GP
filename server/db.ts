@@ -226,6 +226,33 @@ export async function initDatabase() {
     );
   `;
 
+  // ✅ Status reference table for tender lifecycle
+  const createStatusTable = `
+    CREATE TABLE IF NOT EXISTS status (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE
+    );
+  `;
+
+  // ✅ Insert the three main tender statuses
+  const insertStatusData = `
+    INSERT OR IGNORE INTO status (id, name) VALUES
+      (1, 'OPEN'),
+      (2, 'AWARDING'),
+      (3, 'FINISHED');
+  `;
+
+  // ✅ Add status columns to existing tender table (safe migration)
+  const addStatusColumnsToTender = `
+    ALTER TABLE tender
+    ADD COLUMN status_id INTEGER NOT NULL DEFAULT 1;
+  `;
+
+  const addFinishedAtToTender = `
+    ALTER TABLE tender
+    ADD COLUMN finished_at TEXT;
+  `;
+
   // Tender table and relationships
   const createTenderTable = `
     CREATE TABLE IF NOT EXISTS tender (
@@ -252,8 +279,11 @@ export async function initDatabase() {
       file2_name            TEXT,
       expected_budget       REAL,
       required_files        TEXT,
+      status_id             INTEGER NOT NULL DEFAULT 1 CHECK (status_id IN (1, 2, 3)),
+      finished_at           TEXT,
       FOREIGN KEY (buyer_id) REFERENCES Buyer(ID) ON DELETE CASCADE ON UPDATE CASCADE,
-      FOREIGN KEY (domain_id) REFERENCES domains(ID) ON DELETE RESTRICT ON UPDATE CASCADE
+      FOREIGN KEY (domain_id) REFERENCES domains(ID) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (status_id) REFERENCES status(id) ON DELETE RESTRICT ON UPDATE CASCADE
     );
   `;
 
@@ -396,6 +426,10 @@ export async function initDatabase() {
     realDb.run(createInquiriesTable);
     realDb.run(createAnswersTable);
     
+    // Create status reference table first
+    realDb.run(createStatusTable);
+    realDb.run(insertStatusData);
+    
     // Create tender tables
     realDb.run(createTenderTable);
     realDb.run(createTenderIndex);
@@ -405,6 +439,29 @@ export async function initDatabase() {
     realDb.run(createTenderLicensesIndex);
     realDb.run(createTenderCertificatesTable);
     realDb.run(createTenderCertificatesIndex);
+    
+    // Add status columns to existing tender table (safe migration)
+    try {
+      realDb.run(addStatusColumnsToTender);
+      console.log("✅ Added status_id column to tender table");
+    } catch (error: any) {
+      if (error.message.includes('duplicate column name')) {
+        console.log("✅ status_id column already exists in tender table");
+      } else {
+        console.error("❌ Error adding status_id column:", error);
+      }
+    }
+    
+    try {
+      realDb.run(addFinishedAtToTender);
+      console.log("✅ Added finished_at column to tender table");
+    } catch (error: any) {
+      if (error.message.includes('duplicate column name')) {
+        console.log("✅ finished_at column already exists in tender table");
+      } else {
+        console.error("❌ Error adding finished_at column:", error);
+      }
+    }
     
     // Create tender required files table
     realDb.run(createTenderRequiredFilesTable);

@@ -17,12 +17,14 @@ export const getTenders: RequestHandler = (req, res) => {
     b.Account_name as buyer_name,
     b.company_name as buyer_company,
     c.name as city_name,
-    r.name as region_name
+    r.name as region_name,
+    s.name as status_name
    FROM tender t
    LEFT JOIN domains d ON t.domain_id = d.ID
    LEFT JOIN Buyer b ON t.buyer_id = b.ID
    LEFT JOIN City c ON t.city_id = c.id
-   LEFT JOIN Region r ON c.region_id = r.id`;
+   LEFT JOIN Region r ON c.region_id = r.id
+   LEFT JOIN status s ON t.status_id = s.id`;
   
   const params: any[] = [];
   
@@ -83,11 +85,13 @@ export const getTenderById: RequestHandler = (req, res) => {
       t.city_id, t.created_at, t.submit_deadline, t.quires_deadline, t.contract_time, 
       t.previous_work, t.evaluation_criteria, t.used_technologies, t.tender_coordinator, 
       t.coordinator_email, t.coordinator_phone, t.file1_name, t.file2_name, t.expected_budget,
-      d.Name as domain_name, c.name as city_name, r.name as region_name
+      t.status_id, t.finished_at,
+      d.Name as domain_name, c.name as city_name, r.name as region_name, s.name as status_name
      FROM tender t
      LEFT JOIN domains d ON t.domain_id = d.ID
      LEFT JOIN City c ON t.city_id = c.id
      LEFT JOIN Region r ON c.region_id = r.id
+     LEFT JOIN status s ON t.status_id = s.id
      WHERE t.id = ?`,
     [id],
     (err, row) => {
@@ -328,8 +332,8 @@ export const createTender: RequestHandler = (req, res) => {
           buyer_id, reference_number, title, domain_id, project_description,
           city_id, submit_deadline, quires_deadline, contract_time, previous_work,
           evaluation_criteria, used_technologies, tender_coordinator, coordinator_email, coordinator_phone, 
-          file1, file2, file1_name, file2_name, expected_budget, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          file1, file2, file1_name, file2_name, expected_budget, status_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)`,
         [
           buyer_id, nextRefNumber, title, domain_id, project_description,
           city_id, submit_deadline, quires_deadline, contract_time, previous_work,
@@ -621,9 +625,11 @@ export const getTendersByDomain: RequestHandler = (req, res) => {
   db.all(
     `SELECT 
       t.*,
-      d.Name as domain_name
+      d.Name as domain_name,
+      s.name as status_name
      FROM tender t
      LEFT JOIN domains d ON t.domain_id = d.ID
+     LEFT JOIN status s ON t.status_id = s.id
      WHERE t.domain_id = ?
      ORDER BY t.created_at DESC`,
     [domainId],

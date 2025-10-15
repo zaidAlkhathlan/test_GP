@@ -138,6 +138,9 @@ export interface TenderEntity {
   evaluation_criteria?: string;
   used_technologies?: string;
   tender_coordinator?: string;
+  status_id?: number;
+  status_name?: string;
+  finished_at?: string;
   coordinator_email?: string;
   coordinator_phone?: string;
   expected_budget?: number;
@@ -178,6 +181,9 @@ export interface Tender {
   remainingDays: number;
   remainingInquiryDays: number;
   status: 'active' | 'expired' | 'awarded' | 'draft';
+  // Database status information
+  status_id?: number;
+  status_name?: string;
   description?: string;
   referenceNumber?: string;
   // Sub-domains this tender covers

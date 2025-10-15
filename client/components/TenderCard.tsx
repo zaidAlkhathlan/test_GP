@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Tender } from "@shared/api";
 import clsx from "clsx";
+import TenderStatusTag, { mapDatabaseStatus } from "@/components/ui/TenderStatusTag";
 
 interface TenderCardProps {
   tender: Tender;
@@ -26,7 +27,15 @@ export default function TenderCard({
     <div className={clsx("w-full rounded-xl border border-gray-200 bg-white shadow-sm p-8 min-h-[420px]", className)} dir="rtl">
       {/* Title & Company */}
       <div className="mb-6 text-right">
-        <h3 className="text-xl font-bold text-gray-900 mb-2 leading-tight">{tender.title}</h3>
+        <div className="flex items-start justify-between mb-2">
+         
+          <h3 className="text-xl font-bold text-gray-900 leading-tight flex-1">{tender.title}</h3>
+
+           <TenderStatusTag 
+            status={mapDatabaseStatus(tender.status_name)} 
+            className="mr-2 mt-1" 
+          />
+        </div>
         <p className="text-base text-gray-600">{tender.company}</p>
       </div>
 
