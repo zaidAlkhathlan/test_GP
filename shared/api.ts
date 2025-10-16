@@ -175,6 +175,9 @@ export interface Tender {
   category?: string;
   location?: string;
   region?: string;
+  // Numeric ids for robust filtering
+  cityId?: number | null;
+  regionId?: number | null;
   budget?: string;
   publishDate: string;
   offerDeadline: string;
@@ -189,6 +192,11 @@ export interface Tender {
   referenceNumber?: string;
   // Sub-domains this tender covers
   subDomains?: string[];
+  // Numeric domain id and sub-domain ids for filtering
+  domainId?: number | null;
+  subDomainIds?: Array<number>;
+  // Raw sub-domain objects when available
+  rawSubDomains?: SubDomain[];
   // Dynamic file requirements
   requiredFiles?: RequiredFile[];
 }

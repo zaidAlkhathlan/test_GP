@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Calendar, ChevronDown } from 'lucide-react';
+import { Search, Calendar, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import LocationSelector from './LocationSelector';
+import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from '@shared/api';
+import { useEffect } from 'react';
 
 interface TenderFilterProps {
   onFilterChange?: (filters: FilterState) => void;
@@ -21,8 +24,8 @@ interface FilterState {
     from: string;
     to: string;
   };
-  region: string;
-  city: string;
+  region: number | null;
+  city: number | null;
   primaryDomain: string;
   subDomain: string;
 }
@@ -90,11 +93,53 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
       from: '',
       to: '',
     },
-    region: '',
-    city: '',
+    region: null,
+    city: null,
     primaryDomain: '',
     subDomain: '',
   });
+
+  const [domains, setDomains] = React.useState<Domain[]>([]);
+  const [subDomains, setSubDomains] = React.useState<SubDomain[]>([]);
+  const [filteredSubDomains, setFilteredSubDomains] = React.useState<SubDomain[]>([]);
+
+  // Fetch domains and sub-domains (reuse CreateTender patterns)
+  useEffect(() => {
+    const fetchDomains = async () => {
+      try {
+        const res = await fetch('/api/domains');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: DomainsResponse = await res.json();
+        setDomains(data.domains);
+      } catch (e) {
+        console.error('Error fetching domains', e);
+      }
+    };
+
+    const fetchSubDomains = async () => {
+      try {
+        const res = await fetch('/api/sub-domains');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: SubDomainsResponse = await res.json();
+        setSubDomains(data.subDomains);
+      } catch (e) {
+        console.error('Error fetching sub-domains', e);
+      }
+    };
+
+    fetchDomains();
+    fetchSubDomains();
+  }, []);
+
+  // Filter sub-domains when primary domain changes
+  useEffect(() => {
+    if (filters.primaryDomain) {
+      const fd = subDomains.filter(sd => String(sd.domain_id) === String(filters.primaryDomain));
+      setFilteredSubDomains(fd);
+    } else {
+      setFilteredSubDomains([]);
+    }
+  }, [filters.primaryDomain, subDomains]);
 
   const handleFilterChange = (key: string, value: any) => {
     const newFilters = { ...filters, [key]: value };
@@ -215,55 +260,32 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
           </div>
         </div>
 
-        {/* Region */}
+        {/* Region + City (DB-backed) */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-            المنطقة
-          </label>
-          <div className="relative">
-            <select
-              value={filters.region}
-              onChange={(e) => {
-                const newRegion = e.target.value;
-                console.log('Region selected:', newRegion); // Debug log
-                handleFilterChange('region', newRegion);
-                handleFilterChange('city', ''); // Reset city when region changes
-              }}
-              className="w-full p-2 border border-gray-300 rounded-lg text-right bg-white appearance-none pr-10"
-            >
-              <option value="">اختر المنطقة</option>
-              {Object.entries(saudiRegions).map(([key, region]) => (
-                <option key={key} value={key}>{region.name}</option>
-              ))}
-            </select>
-            <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* City */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 text-right mb-2">
-            المدينة
-          </label>
-          <div className="relative">
-            <select
-              value={filters.city}
-              onChange={(e) => {
-                console.log('City selected:', e.target.value); // Debug log
-                handleFilterChange('city', e.target.value);
-              }}
-              className="w-full p-2 border border-gray-300 rounded-lg text-right bg-white appearance-none pr-10"
-              disabled={!filters.region}
-            >
-              <option value="">اختر المدينة</option>
-              {filters.region && saudiRegions[filters.region as keyof typeof saudiRegions]?.cities.map((city) => (
-                <option key={city} value={city}>{city}</option>
-              ))}
-            </select>
-            <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-          </div>
+          <LocationSelector
+            regionId={filters.region || undefined}
+            cityId={filters.city || undefined}
+            onRegionChange={(regionId) => {
+              console.log('LocationSelector onRegionChange ->', regionId);
+              setFilters((prev) => {
+                const updated = { ...prev, region: regionId || null, city: null };
+                onFilterChange?.(updated);
+                console.log('TenderFilter updated filters after region:', updated);
+                return updated;
+              });
+            }}
+            onCityChange={(cityId) => {
+              console.log('LocationSelector onCityChange ->', cityId);
+              setFilters((prev) => {
+                const updated = { ...prev, city: cityId || null };
+                onFilterChange?.(updated);
+                console.log('TenderFilter updated filters after city:', updated);
+                return updated;
+              });
+            }}
+            showRegion={true}
+            showCity={true}
+          />
         </div>
 
         {/* Primary Domain */}
@@ -278,11 +300,9 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
               className="w-full p-2 border border-gray-300 rounded-lg text-right bg-white appearance-none"
             >
               <option value="">اختر النشاط الرئيسي</option>
-              <option value="tech">التكنولوجيا</option>
-              <option value="construction">البناء والتشييد</option>
-              <option value="education">التعليم والتدريب</option>
-              <option value="health">الصحة</option>
-              <option value="transport">النقل والمواصلات</option>
+              {domains.map(d => (
+                <option key={d.ID} value={String(d.ID)}>{d.Name}</option>
+              ))}
             </select>
             <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           </div>
@@ -300,28 +320,10 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
               className="w-full p-2 border border-gray-300 rounded-lg text-right bg-white appearance-none"
               disabled={!filters.primaryDomain}
             >
-              <option value="">اختر النشاط الرئيسي</option>
-              {filters.primaryDomain === 'tech' && (
-                <>
-                  <option value="software">تطوير البرمجيات</option>
-                  <option value="mobile">تطوير التطبيقات</option>
-                  <option value="security">الأمن السيبراني</option>
-                </>
-              )}
-              {filters.primaryDomain === 'construction' && (
-                <>
-                  <option value="buildings">المباني</option>
-                  <option value="roads">الطرق</option>
-                  <option value="infrastructure">البنية التحتية</option>
-                </>
-              )}
-              {filters.primaryDomain === 'education' && (
-                <>
-                  <option value="training">التدريب المهني</option>
-                  <option value="academic">التعليم الأكاديمي</option>
-                  <option value="elearning">التعليم الإلكتروني</option>
-                </>
-              )}
+              <option value="">اختر النشاط الفرعي</option>
+              {filteredSubDomains.map(sd => (
+                <option key={sd.ID} value={String(sd.ID)}>{sd.Name}</option>
+              ))}
             </select>
             <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
           </div>
@@ -331,14 +333,14 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
         <Button 
           variant="outline" 
           className="w-full text-gray-600 border-gray-300 hover:bg-gray-50"
-          onClick={() => {
+            onClick={() => {
             const resetFilters = {
               searchText: '',
               status: { active: false, nearDeadline: false },
               budgetRange: [0, 10000000] as [number, number],
               dateRange: { from: '', to: '' },
-              region: '',
-              city: '',
+              region: null,
+              city: null,
               primaryDomain: '',
               subDomain: '',
             };

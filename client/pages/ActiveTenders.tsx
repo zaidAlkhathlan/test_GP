@@ -18,6 +18,7 @@ export default function ActiveTenders() {
   };
 
   const handleFilterChange = (filters: any) => {
+    console.log('ActiveTenders.handleFilterChange called with filters:', filters);
     let filtered = [...tenders];
 
     // Search text filter
@@ -45,12 +46,22 @@ export default function ActiveTenders() {
       });
     }
 
-    // Location filter (region and city)
+    // Location filter (region and city) - prefer numeric ids when available
     if (filters.region || filters.city) {
       filtered = filtered.filter(tender => {
+        // If both tender and filter provide numeric ids, compare them
+        if (filters.city && (tender as any).cityId) {
+          return Number((tender as any).cityId) === Number(filters.city);
+        }
+
+        if (filters.region && (tender as any).regionId) {
+          if (!filters.city) return Number((tender as any).regionId) === Number(filters.region);
+        }
+
+        // Fallback: match by location name
         const location = tender.location?.toLowerCase() || '';
         if (filters.city) {
-          return location.includes(filters.city.toLowerCase());
+          return location.includes(String(filters.city).toLowerCase());
         }
         return true;
       });
@@ -58,12 +69,40 @@ export default function ActiveTenders() {
 
     // Domain filters
     if (filters.primaryDomain) {
-      filtered = filtered.filter(tender =>
-        tender.category?.toLowerCase().includes(filters.primaryDomain.toLowerCase())
-      );
+      // If tender has numeric domain id, compare by id
+      filtered = filtered.filter((tender) => {
+        const tDomainId = (tender as any).domain_id || (tender as any).domainId;
+        if (tDomainId) {
+          return String(tDomainId) === String(filters.primaryDomain);
+        }
+
+        // Fallback: check category/name
+        return tender.category?.toLowerCase().includes(String(filters.primaryDomain).toLowerCase());
+      });
+    }
+
+    if (filters.subDomain) {
+      // Prefer numeric subDomainIds exposed by transformTenderForDisplay
+      filtered = filtered.filter((tender) => {
+        const tSubIds: number[] | undefined = (tender as any).subDomainIds;
+        if (Array.isArray(tSubIds) && tSubIds.length > 0) {
+          return tSubIds.some(id => String(id) === String(filters.subDomain));
+        }
+
+        // Fallback: check raw sub-domain objects if available
+        const raw = (tender as any).rawSubDomains || (tender as any).sub_domains || (tender as any).subDomains || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+          return raw.some((sd: any) => String(sd.ID || sd.id) === String(filters.subDomain) || String(sd.Name || sd.name).toLowerCase().includes(String(filters.subDomain).toLowerCase()));
+        }
+
+        // Final fallback: compare against the simple subDomains names array
+        const subNames = (tender as any).subDomains || [];
+        return Array.isArray(subNames) && subNames.some((s: string) => s.toLowerCase().includes(String(filters.subDomain).toLowerCase()));
+      });
     }
 
     setFilteredTenders(filtered);
+    console.log('ActiveTenders: filtered count ->', filtered.length);
   };
 
   // Check buyer authentication

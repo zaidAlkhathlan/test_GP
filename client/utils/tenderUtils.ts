@@ -37,6 +37,8 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
     category: dbTender.domain_name || 'فئة غير محددة',
     location: dbTender.city_name || 'غير محدد',
     region: dbTender.region_name || 'غير محدد',
+    cityId: dbTender.city_table_id || dbTender.city_id || null,
+    regionId: dbTender.region_id || null,
     budget: dbTender.expected_budget ? `${parseFloat(dbTender.expected_budget).toLocaleString('ar-SA')} ريال` : 'غير محدد',
     publishDate: formatArabicDate(dbTender.created_at),
     offerDeadline: formatArabicDate(dbTender.submit_deadline),
@@ -49,7 +51,11 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
     status_name: dbTender.status_name,
     description: dbTender.project_description,
     referenceNumber: String(dbTender.reference_number || dbTender.id),
-    subDomains
+    subDomains,
+    // expose numeric domain id and sub-domain ids so client-side filtering can match by id
+    domainId: dbTender.domain_id || dbTender.domainId || null,
+    subDomainIds: dbTender.sub_domains ? dbTender.sub_domains.map((sd: any) => sd.ID || sd.id) : [],
+    rawSubDomains: dbTender.sub_domains || []
   };
 }
 

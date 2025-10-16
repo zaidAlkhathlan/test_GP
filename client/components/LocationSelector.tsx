@@ -32,10 +32,9 @@ export default function LocationSelector({
 
   const handleRegionChange = (newRegionId: number) => {
     onRegionChange(newRegionId);
-    // Reset city when region changes
-    if (cityId) {
-      onCityChange(0);
-    }
+    // Always reset city when region changes so UI and filters stay consistent
+    // (call with 0 which the parent maps to null)
+    onCityChange(0);
   };
 
   return (

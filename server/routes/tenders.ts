@@ -16,7 +16,9 @@ export const getTenders: RequestHandler = (req, res) => {
     d.Name as domain_name,
     b.Account_name as buyer_name,
     b.company_name as buyer_company,
+    c.id as city_table_id,
     c.name as city_name,
+    r.id as region_id,
     r.name as region_name,
     s.name as status_name
    FROM tender t
