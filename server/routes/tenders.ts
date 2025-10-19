@@ -7,10 +7,14 @@ interface MulterRequest extends Request {
   files?: { [fieldname: string]: Express.Multer.File[] };
 }
 
-// Get all tenders (optionally filtered by buyer_id)
+// Get all tenders (optionally filtered by buyer_id and submit_deadline range)
 export const getTenders: RequestHandler = (req, res) => {
   const buyerId = req.query.buyer_id;
-  
+  const submitFrom = req.query.submit_from as string | undefined;
+  const submitTo = req.query.submit_to as string | undefined;
+  const expectedMin = (req.query.expected_min as string | undefined) ?? undefined;
+  const expectedMax = (req.query.expected_max as string | undefined) ?? undefined;
+
   let query = `SELECT 
     t.*,
     d.Name as domain_name,
@@ -29,10 +33,37 @@ export const getTenders: RequestHandler = (req, res) => {
    LEFT JOIN status s ON t.status_id = s.id`;
   
   const params: any[] = [];
-  
+  const where: string[] = [];
+
   if (buyerId) {
-    query += ` WHERE t.buyer_id = ?`;
+    where.push(`t.buyer_id = ?`);
     params.push(buyerId);
+  }
+
+  if (submitFrom) {
+    // include start of day
+    where.push(`datetime(t.submit_deadline) >= datetime(?)`);
+    params.push(`${submitFrom} 00:00:00`);
+  }
+
+  if (submitTo) {
+    // include end of day
+    where.push(`datetime(t.submit_deadline) <= datetime(?)`);
+    params.push(`${submitTo} 23:59:59`);
+  }
+
+  // Expected budget filtering (cast text to number)
+  if (expectedMin) {
+    where.push(`CAST(COALESCE(t.expected_budget, '0') AS REAL) >= ?`);
+    params.push(Number(expectedMin));
+  }
+  if (expectedMax) {
+    where.push(`CAST(COALESCE(t.expected_budget, '0') AS REAL) <= ?`);
+    params.push(Number(expectedMax));
+  }
+
+  if (where.length > 0) {
+    query += ` WHERE ` + where.join(' AND ');
   }
   
   query += ` ORDER BY t.created_at DESC`;

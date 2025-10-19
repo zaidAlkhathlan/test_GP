@@ -71,33 +71,49 @@ export const getTendersWithStatus: RequestHandler = (req, res) => {
  */
 export const updateExpiredTenders: RequestHandler = (req, res) => {
   console.log("⏰ Checking for tenders that have passed their deadline...");
-
-  const sql = `
-    UPDATE tender
-    SET status_id = ?
-    WHERE status_id = ?
-      AND datetime('now') >= datetime(submit_deadline)
-  `;
-
-  db.run(sql, [TENDER_STATUS.AWARDING, TENDER_STATUS.OPEN], function(err: Error | null) {
-    if (err) {
-      console.error("❌ Database error updating expired tenders:", err);
-      return res.status(500).json({ 
-        error: "فشل في تحديث المناقصات المنتهية الصلاحية",
-        details: err.message 
+  runUpdateExpiredTenders()
+    .then((updatedCount) => {
+      console.log(`✅ Updated ${updatedCount} expired tenders to AWARDING status`);
+      res.json({
+        success: true,
+        message: `تم تحديث ${updatedCount} مناقصة منتهية الصلاحية`,
+        updated_count: updatedCount
       });
-    }
+    })
+    .catch((err) => {
+      console.error("❌ Database error updating expired tenders:", err);
+      res.status(500).json({ 
+        error: "فشل في تحديث المناقصات المنتهية الصلاحية",
+        details: err.message || String(err)
+      });
+    });
+};
 
-    const updatedCount = (this as any).changes || 0;
-    console.log(`✅ Updated ${updatedCount} expired tenders to AWARDING status`);
-    
-    res.json({
-      success: true,
-      message: `تم تحديث ${updatedCount} مناقصة منتهية الصلاحية`,
-      updated_count: updatedCount
+/**
+ * Programmatic runner which updates expired tenders and returns the number updated.
+ * This makes it possible to call the same logic from startup or a scheduler.
+ */
+export function runUpdateExpiredTenders(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      UPDATE tender
+      SET status_id = ?
+      WHERE status_id = ?
+        AND datetime('now') >= datetime(submit_deadline)
+    `;
+
+    db.run(sql, [TENDER_STATUS.AWARDING, TENDER_STATUS.OPEN], function(err: Error | null) {
+      if (err) return reject(err);
+      try {
+        const updatedCount = (this as any).changes || 0;
+        resolve(updatedCount);
+      } catch (e) {
+        // Some db wrappers don't expose `changes` on this; try a fallback
+        resolve(0);
+      }
     });
   });
-};
+}
 
 /**
  * Mark a tender as FINISHED and set finished_at timestamp

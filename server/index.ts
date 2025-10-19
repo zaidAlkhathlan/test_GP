@@ -13,7 +13,7 @@ import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/do
 import { getRegions, getCitiesByRegion, getAllCities, getCityById } from './routes/locations';
 import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
 import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier, downloadProposalFile, getProposalDetails } from './routes/proposals';
-import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus, awardTender, getAwardedSupplier } from './routes/tender-status';
+import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus, awardTender, getAwardedSupplier, runUpdateExpiredTenders } from './routes/tender-status';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
 import { 
@@ -165,9 +165,27 @@ export function createServer() {
   app.get('/api/available-certificates', getAllAvailableCertificates);
   
   // Initialize DB in background
-  initDatabase().catch((error) => {
-    console.error("Failed to initialize database:", error);
-  });
+  initDatabase()
+    .then(() => {
+      console.log("✅ Database initialized, running expired-tenders check on startup...");
+
+      // Run once immediately to catch any expired tenders
+      runUpdateExpiredTenders()
+        .then((count) => console.log(`⏱ Startup expired-tenders runner updated ${count} tenders`))
+        .catch((err) => console.error("❌ Error running startup expired-tenders runner:", err));
+
+      // Schedule periodic runner. Interval configurable via EXPIRED_TENDERS_INTERVAL_MINUTES (default 5 minutes)
+      const intervalMinutes = Number(process.env.EXPIRED_TENDERS_INTERVAL_MINUTES || '5');
+      const intervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
+      setInterval(() => {
+        runUpdateExpiredTenders()
+          .then((count) => console.log(`⏱ Periodic expired-tenders runner updated ${count} tenders`))
+          .catch((err) => console.error("❌ Error running periodic expired-tenders runner:", err));
+      }, intervalMs);
+    })
+    .catch((error) => {
+      console.error("Failed to initialize database:", error);
+    });
 
   return app;
 }

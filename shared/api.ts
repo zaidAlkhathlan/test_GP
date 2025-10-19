@@ -182,6 +182,8 @@ export interface Tender {
   publishDate: string;
   offerDeadline: string;
   inquiryDeadline: string;
+  // Raw deadlines from DB (ISO strings) for filtering logic
+  submit_deadline?: string;
   remainingDays: number;
   remainingInquiryDays: number;
   status: 'active' | 'expired' | 'awarded' | 'draft';

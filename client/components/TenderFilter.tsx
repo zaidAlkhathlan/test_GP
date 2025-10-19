@@ -15,10 +15,8 @@ interface TenderFilterProps {
 
 interface FilterState {
   searchText: string;
-  status: {
-    active: boolean;
-    nearDeadline: boolean;
-  };
+  // Selected status ids from the status table (e.g., 1=OPEN,2=AWARDING,3=FINISHED)
+  status: number[];
   budgetRange: [number, number];
   dateRange: {
     from: string;
@@ -84,10 +82,7 @@ const saudiRegions = {
 export default function TenderFilter({ onFilterChange, showStatusFilter = true }: TenderFilterProps) {
   const [filters, setFilters] = useState<FilterState>({
     searchText: '',
-    status: {
-      active: false,
-      nearDeadline: false,
-    },
+    status: [],
     budgetRange: [0, 10000000],
     dateRange: {
       from: '',
@@ -131,6 +126,28 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
     fetchSubDomains();
   }, []);
 
+  // Fetch statuses (status reference table)
+  const [statuses, setStatuses] = React.useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // Expecting an array like [{ id: 1, name: 'OPEN' }, ...]
+        setStatuses(data);
+      } catch (e) {
+        console.warn('Failed to fetch statuses, falling back to defaults', e);
+        setStatuses([
+          { id: 1, name: 'OPEN' },
+          { id: 2, name: 'AWARDING' },
+          { id: 3, name: 'FINISHED' }
+        ]);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
   // Filter sub-domains when primary domain changes
   useEffect(() => {
     if (filters.primaryDomain) {
@@ -149,8 +166,8 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
     onFilterChange?.(newFilters);
   };
 
-  const handleStatusChange = (statusKey: string, checked: boolean) => {
-    const newStatus = { ...filters.status, [statusKey]: checked };
+  const handleStatusToggle = (statusId: number, checked: boolean) => {
+    const newStatus = checked ? [...filters.status, statusId] : filters.status.filter(s => s !== statusId);
     handleFilterChange('status', newStatus);
   };
 
@@ -194,28 +211,25 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
               حالة المناقصة
             </label>
             <div className="space-y-3" dir="rtl">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={filters.status.active}
-                  onCheckedChange={(checked) => handleStatusChange('active', !!checked)}
-                />
-                <label className="text-sm text-gray-600 cursor-pointer" onClick={() => handleStatusChange('active', !filters.status.active)}>نشطة</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={filters.status.nearDeadline}
-                  onCheckedChange={(checked) => handleStatusChange('nearDeadline', !!checked)}
-                />
-                <label className="text-sm text-gray-600 cursor-pointer" onClick={() => handleStatusChange('nearDeadline', !filters.status.nearDeadline)}>قريب الانتهاء</label>
-              </div>
+              {statuses.map((s) => (
+                <div key={s.id} className="flex items-center gap-2">
+                  <Checkbox
+                    checked={filters.status.includes(s.id)}
+                    onCheckedChange={(checked) => handleStatusToggle(s.id, !!checked)}
+                  />
+                  <label className="text-sm text-gray-600 cursor-pointer" onClick={() => handleStatusToggle(s.id, !filters.status.includes(s.id))}>
+                    {s.name === 'OPEN' ? 'نشطة' : s.name === 'AWARDING' ? 'قيد التقييم' : s.name === 'FINISHED' ? 'مكتملة' : s.name}
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Budget Range */}
+        {/* Expected Budget Range */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 text-right mb-3">
-            نطاق القيمة (ريال)
+            الميزانية المتوقعة
           </label>
           <div className="px-2">
             <Slider
@@ -336,7 +350,7 @@ export default function TenderFilter({ onFilterChange, showStatusFilter = true }
             onClick={() => {
             const resetFilters = {
               searchText: '',
-              status: { active: false, nearDeadline: false },
+              status: [],
               budgetRange: [0, 10000000] as [number, number],
               dateRange: { from: '', to: '' },
               region: null,

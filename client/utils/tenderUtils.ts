@@ -1,6 +1,49 @@
 // Utility functions for tender data transformation and fetching
 import { Tender, TenderEntity } from "@shared/api";
 
+// Normalize various date input formats to 'YYYY-MM-DD'
+export function normalizeDateInput(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  const v = String(input).trim();
+  if (!v) return undefined;
+
+  // If already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+
+  // Handle 'yy-dd-mm' (e.g., '25-19-10' => '2025-10-19')
+  if (/^\d{2}-\d{2}-\d{2}$/.test(v)) {
+    const [yy, dd, mm] = v.split('-');
+    const yyyy = Number(yy) <= 69 ? `20${yy}` : `19${yy}`; // pivot for 2-digit years
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Handle 'dd-mm-yyyy'
+  if (/^\d{2}-\d{2}-\d{4}$/.test(v)) {
+    const [dd, mm, yyyy] = v.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Handle 'yyyy-dd-mm' (swap day and month)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [yyyy, a, b] = v.split('-');
+    // assume correct order if month in 01-12 already
+    const month = Number(a);
+    if (month >= 1 && month <= 12) return v;
+    return `${yyyy}-${b}-${a}`;
+  }
+
+  // Fallback: try Date parsing and format
+  const d = new Date(v);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return undefined;
+}
+
 // Transform database tender entity to frontend tender interface
 export function transformTenderForDisplay(dbTender: any, companyName?: string): Tender {
   // Calculate remaining days (mock calculation for demo)
@@ -51,6 +94,8 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
     status_name: dbTender.status_name,
     description: dbTender.project_description,
     referenceNumber: String(dbTender.reference_number || dbTender.id),
+  // raw deadline for client-side filters (ISO string)
+  submit_deadline: dbTender.submit_deadline,
     subDomains,
     // expose numeric domain id and sub-domain ids so client-side filtering can match by id
     domainId: dbTender.domain_id || dbTender.domainId || null,
@@ -60,11 +105,27 @@ export function transformTenderForDisplay(dbTender: any, companyName?: string): 
 }
 
 // Fetch tenders from API (optionally filtered by buyer_id)
-export async function fetchTenders(buyerId?: string | number): Promise<Tender[]> {
+export async function fetchTenders(
+  buyerId?: string | number,
+  options?: { submitFrom?: string; submitTo?: string; expectedMin?: number; expectedMax?: number }
+): Promise<Tender[]> {
   try {
     let url = '/api/tenders';
-    if (buyerId) {
-      url += `?buyer_id=${buyerId}`;
+    const params: string[] = [];
+    if (buyerId !== undefined && buyerId !== null) {
+      params.push(`buyer_id=${encodeURIComponent(String(buyerId))}`);
+    }
+
+    const from = normalizeDateInput(options?.submitFrom);
+    const to = normalizeDateInput(options?.submitTo);
+  if (from) params.push(`submit_from=${encodeURIComponent(from)}`);
+  if (to) params.push(`submit_to=${encodeURIComponent(to)}`);
+
+  if (options?.expectedMin !== undefined) params.push(`expected_min=${encodeURIComponent(String(options.expectedMin))}`);
+  if (options?.expectedMax !== undefined) params.push(`expected_max=${encodeURIComponent(String(options.expectedMax))}`);
+
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
     }
     
     const response = await fetch(url);

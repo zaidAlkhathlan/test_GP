@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import TenderCard from '../components/TenderCard';
 import TenderFilter from '../components/TenderFilter';
-import { fetchTenders } from '../utils/tenderUtils';
+import { fetchTenders, normalizeDateInput } from '../utils/tenderUtils';
 import { Tender } from '@shared/api';
 
 export default function ActiveTenders() {
   const navigate = useNavigate();
   const [currentBuyer, setCurrentBuyer] = useState<any>(null);
+  const [allBuyerTenders, setAllBuyerTenders] = useState<Tender[]>([]);
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [filteredTenders, setFilteredTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,9 +18,40 @@ export default function ActiveTenders() {
     navigate(`/tender/${tenderId}/offers`);
   };
 
-  const handleFilterChange = (filters: any) => {
+  const handleFilterChange = async (filters: any) => {
     console.log('ActiveTenders.handleFilterChange called with filters:', filters);
-    let filtered = [...tenders];
+    let base: Tender[] = [...allBuyerTenders];
+
+    // If a date range and/or budget range is provided, fetch from server
+    const from = normalizeDateInput(filters?.dateRange?.from);
+    const to = normalizeDateInput(filters?.dateRange?.to);
+    const DEFAULT_BUDGET_MAX = 10000000;
+    const hasBudget = Array.isArray(filters?.budgetRange)
+      && (filters.budgetRange[0] > 0 || filters.budgetRange[1] < DEFAULT_BUDGET_MAX);
+
+    let appliedServerBudgetFilter = false;
+    if ((from || to || hasBudget) && currentBuyer) {
+      try {
+        const opts: any = {};
+        if (from) opts.submitFrom = from;
+        if (to) opts.submitTo = to;
+        if (hasBudget) {
+          opts.expectedMin = Number(filters.budgetRange[0]) || 0;
+          // Only send max if user reduced it below default
+          if (filters.budgetRange[1] < DEFAULT_BUDGET_MAX) {
+            opts.expectedMax = Number(filters.budgetRange[1]);
+          }
+          appliedServerBudgetFilter = true;
+        }
+        const serverFiltered = await fetchTenders(currentBuyer.id, opts);
+        base = serverFiltered;
+      } catch (e) {
+        console.warn('Failed to fetch server-filtered tenders by date/budget range', e);
+        appliedServerBudgetFilter = false;
+      }
+    }
+
+    let filtered = [...base];
 
     // Search text filter
     if (filters.searchText) {
@@ -29,21 +61,59 @@ export default function ActiveTenders() {
       );
     }
 
-    // Status filter
-    if (filters.status.active || filters.status.nearDeadline) {
-      filtered = filtered.filter(tender => {
-        if (filters.status.active && tender.status === 'active') return true;
-        if (filters.status.nearDeadline && tender.remainingDays <= 7) return true;
+    // Status filter - filters.status is an array of selected status IDs
+    if (Array.isArray(filters.status) && filters.status.length > 0) {
+      const now = new Date();
+      const matchesStatus = (sId: number, t: Tender) => {
+        const sid = (t as any).status_id || null;
+
+        // If we have numeric id on tender, use it primarily
+        if (sid) {
+          if (sId === 1) {
+            // OPEN: only include if deadline not passed (not expired)
+            return Number(sid) === 1 && (t.remainingDays ?? 0) > 0;
+          }
+
+          if (sId === 2) {
+            // AWARDING: include tenders already AWARDING, and also those still OPEN but expired
+            if (Number(sid) === 2) return true;
+            if (Number(sid) === 1) {
+              return (t.remainingDays ?? 0) <= 0; // expired but still marked OPEN in DB
+            }
+            return false;
+          }
+
+          if (sId === 3) {
+            // FINISHED: match only finished
+            return Number(sid) === 3;
+          }
+
+          return false;
+        }
+
+        // Fallback textual matching when no numeric id present
+        const name = (t as any).status_name || t.status || '';
+        if (!name) return false;
+
+        if (sId === 1) return String(name).toUpperCase().includes('OPEN') || String(name).includes('نشط');
+        if (sId === 2) return String(name).toUpperCase().includes('AWARD') || String(name).includes('ترس') || String(name).toLowerCase().includes('قريب');
+        if (sId === 3) return String(name).toUpperCase().includes('FINISH') || String(name).includes('قفل') || String(name).includes('مكتمل');
         return false;
+      };
+
+      filtered = filtered.filter((tender) => {
+        return filters.status.some((sId: number) => matchesStatus(Number(sId), tender));
       });
     }
 
-    // Budget filter
-    if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 10000000) {
-      filtered = filtered.filter(tender => {
-        const budget = parseFloat(tender.budget?.replace(/[^\d]/g, '') || '0');
-        return budget >= filters.budgetRange[0] && budget <= filters.budgetRange[1];
-      });
+    // Budget filter (skip if already applied on server)
+    if (!appliedServerBudgetFilter) {
+      if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < DEFAULT_BUDGET_MAX) {
+        filtered = filtered.filter(tender => {
+          const budget = parseFloat(tender.budget?.replace(/[^\d]/g, '') || '0');
+          return budget >= filters.budgetRange[0] && budget <= filters.budgetRange[1];
+        });
+      }
     }
 
     // Location filter (region and city) - prefer numeric ids when available
@@ -115,7 +185,7 @@ export default function ActiveTenders() {
     }
   }, [navigate]);
 
-  // Fetch buyer's active tenders
+  // Fetch buyer's tenders (load all statuses). UI will by default show OPEN tenders but filters can show AWARDING/FINISHED
   useEffect(() => {
     async function loadActiveTenders() {
       if (!currentBuyer) return;
@@ -124,10 +194,12 @@ export default function ActiveTenders() {
         setLoading(true);
         // Fetch only this buyer's tenders
         const fetchedTenders = await fetchTenders(currentBuyer.id);
-        // Filter to show only active (non-expired) tenders
-        const activeTenders = fetchedTenders.filter(tender => tender.status === 'active');
-        setTenders(activeTenders);
-        setFilteredTenders(activeTenders);
+  // Keep all fetched tenders in memory (full list)
+  setAllBuyerTenders(fetchedTenders);
+  setTenders(fetchedTenders);
+        // By default show only OPEN tenders to preserve existing 'active' UX
+        const defaultVisible = fetchedTenders.filter((t) => (t as any).status_id === 1 || (t.status === 'active'));
+        setFilteredTenders(defaultVisible);
       } catch (error) {
         console.error('Error loading active tenders:', error);
       } finally {
