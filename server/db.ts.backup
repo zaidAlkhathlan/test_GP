@@ -1,0 +1,390 @@
+import path from "path";
+import fs from "fs";
+import sqlite3 from "sqlite3";
+import { seedDatabase } from "./seedData";
+
+const dataDir = path.resolve(process.cwd(), "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
+}
+
+const dbPath = path.join(dataDir, "app.db");
+
+// Define database interface for compatibility
+interface DatabaseWrapper {
+  run(sql: string, params: any[], callback?: (this: any, err: Error | null) => void): { lastID: number };
+  get(sql: string, params: any[], callback: (err: Error | null, row?: any) => void): void;
+  all(sql: string, params: any[], callback: (err: Error | null, rows?: any[]) => void): void;
+  serialize(callback: () => void): void;
+}
+
+// exported `db` will be a database wrapper
+export let db: DatabaseWrapper;
+
+export async function initDatabase() {
+  console.log("🚀 Initializing database with sqlite3...");
+
+  // Enable foreign keys
+  const enableForeignKeys = `PRAGMA foreign_keys = ON;`;
+
+  // Core taxonomy tables
+  const createDomainsTable = `
+    CREATE TABLE IF NOT EXISTS domains (
+      ID INTEGER PRIMARY KEY,
+      Name TEXT NOT NULL UNIQUE
+    );
+  `;
+
+  const createSubDomainsTable = `
+    CREATE TABLE IF NOT EXISTS sub_domains (
+      ID INTEGER PRIMARY KEY,
+      domain_id INTEGER NOT NULL,
+      Name TEXT NOT NULL,
+      FOREIGN KEY (domain_id) REFERENCES domains(ID)
+    );
+  `;
+
+  const createSubDomainsIndex = `CREATE INDEX IF NOT EXISTS idx_sub_domains_domain_id ON sub_domains(domain_id);`;
+
+  // Updated Buyer table with your new schema
+  const createBuyerTable = `
+    CREATE TABLE IF NOT EXISTS Buyer (
+      ID INTEGER PRIMARY KEY,
+      Commercial_registration_number TEXT NOT NULL,
+      Commercial_Phone_number TEXT NOT NULL,
+      domains_id INTEGER NOT NULL,
+      created_at TIMESTAMP NOT NULL,
+      City TEXT NOT NULL,
+      updated_at TIMESTAMP NOT NULL,
+      Logo TEXT,
+      Account_name TEXT NOT NULL,
+      Account_email TEXT NOT NULL,
+      Account_phone INTEGER NOT NULL,
+      company_name TEXT NOT NULL,
+      Account_password TEXT NOT NULL,
+      FOREIGN KEY (domains_id) REFERENCES domains(ID)
+    );
+  `;
+
+  const createBuyerDomainIndex = `CREATE INDEX IF NOT EXISTS idx_buyer_domain ON Buyer(domains_id);`;
+
+  // Buyer ↔ Sub_Domains (M:N) relationship
+  const createBuyerSubDomainsTable = `
+    CREATE TABLE IF NOT EXISTS buyer_sub_domains (
+      buyer_id INTEGER NOT NULL,
+      sub_domains_id INTEGER NOT NULL,
+      Name TEXT NOT NULL,
+      PRIMARY KEY (buyer_id, sub_domains_id),
+      FOREIGN KEY (buyer_id) REFERENCES Buyer(ID),
+      FOREIGN KEY (sub_domains_id) REFERENCES sub_domains(ID)
+    );
+  `;
+
+  const createBuyerSubDomainsIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_bsd_buyer ON buyer_sub_domains(buyer_id);
+    CREATE INDEX IF NOT EXISTS idx_bsd_subd ON buyer_sub_domains(sub_domains_id);
+  `;
+
+  // Licenses and Buyer-Licenses relationship
+  const createLicensesTable = `
+    CREATE TABLE IF NOT EXISTS Licenses (
+      ID INTEGER PRIMARY KEY,
+      Name TEXT NOT NULL UNIQUE
+    );
+  `;
+
+  const createBuyerLicensesTable = `
+    CREATE TABLE IF NOT EXISTS Buyer_Licenses (
+      buyer_id INTEGER NOT NULL,
+      license_id INTEGER NOT NULL,
+      PRIMARY KEY (buyer_id, license_id),
+      FOREIGN KEY (buyer_id) REFERENCES Buyer(ID),
+      FOREIGN KEY (license_id) REFERENCES Licenses(ID)
+    );
+  `;
+
+  const createBuyerLicensesIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_bl_buyer ON Buyer_Licenses(buyer_id);
+    CREATE INDEX IF NOT EXISTS idx_bl_license ON Buyer_Licenses(license_id);
+  `;
+
+  // Certificates and Buyer-Certificates relationship
+  const createCertificatesTable = `
+    CREATE TABLE IF NOT EXISTS Certificates (
+      ID INTEGER PRIMARY KEY,
+      Name TEXT NOT NULL UNIQUE
+    );
+  `;
+
+  const createBuyerCertificatesTable = `
+    CREATE TABLE IF NOT EXISTS Buyer_Certificates (
+      buyer_id INTEGER NOT NULL,
+      certificate_id INTEGER NOT NULL,
+      PRIMARY KEY (buyer_id, certificate_id),
+      FOREIGN KEY (buyer_id) REFERENCES Buyer(ID),
+      FOREIGN KEY (certificate_id) REFERENCES Certificates(ID)
+    );
+  `;
+
+  const createBuyerCertificatesIndexes = `
+    CREATE INDEX IF NOT EXISTS idx_bc_buyer ON Buyer_Certificates(buyer_id);
+    CREATE INDEX IF NOT EXISTS idx_bc_certificate ON Buyer_Certificates(certificate_id);
+  `;
+
+  // Existing inquiry tables
+  const createInquiriesTable = `
+    CREATE TABLE IF NOT EXISTS Inquiry (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tender_id TEXT NOT NULL,
+      supplier_id INTEGER NOT NULL,
+      question_text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  const createAnswersTable = `
+    CREATE TABLE IF NOT EXISTS InquiryAnswer (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inquiry_id INTEGER NOT NULL,
+      buyer_id INTEGER NOT NULL,
+      answer_text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (inquiry_id) REFERENCES Inquiry(id)
+    );
+  `;
+
+  try {
+    // Dynamically import sql.js to avoid bundler resolving it at config time
+    let initSqlJs: any;
+    try {
+      const mod = await import("sql.js");
+      initSqlJs = mod.default ?? mod;
+    } catch (e) {
+      // Will be handled below by falling back to in-memory
+      initSqlJs = null;
+    }
+
+    if (initSqlJs) {
+      const SQL = await initSqlJs();
+
+      // Load existing database file or create new one
+      let dbData: Uint8Array | undefined;
+      if (fs.existsSync(dbPath)) {
+        dbData = fs.readFileSync(dbPath);
+        console.log("📖 Loading existing database from", dbPath);
+      } else {
+        console.log("🆕 Creating new database at", dbPath);
+      }
+
+      const realDb = new SQL.Database(dbData);
+    
+    // Enable foreign keys and create all tables
+    realDb.run(enableForeignKeys);
+    
+    // Create taxonomy tables
+    realDb.run(createDomainsTable);
+    realDb.run(createSubDomainsTable);
+    realDb.run(createSubDomainsIndex);
+    
+    // Create buyer and related tables
+    realDb.run(createBuyerTable);
+    realDb.run(createBuyerDomainIndex);
+    realDb.run(createBuyerSubDomainsTable);
+    realDb.run(createBuyerSubDomainsIndexes);
+    
+    // Create licenses tables
+    realDb.run(createLicensesTable);
+    realDb.run(createBuyerLicensesTable);
+    realDb.run(createBuyerLicensesIndexes);
+    
+    // Create certificates tables
+    realDb.run(createCertificatesTable);
+    realDb.run(createBuyerCertificatesTable);
+    realDb.run(createBuyerCertificatesIndexes);
+    
+    // Create existing inquiry tables
+    realDb.run(createInquiriesTable);
+    realDb.run(createAnswersTable);
+    
+    // Save database to file
+    const data = realDb.export();
+    fs.writeFileSync(dbPath, data);
+    
+    console.log("✅ SQLite database initialized successfully at", dbPath);
+    console.log("📁 Database file created:", fs.existsSync(dbPath) ? "YES" : "NO");
+    
+    // Create a wrapper object to maintain compatibility with old sqlite3 API
+    const dbWrapper: DatabaseWrapper = {
+      run(sql: string, params: any[], callback?: (this: any, err: Error | null) => void) {
+        try {
+          console.log("🔧 SQL run:", sql);
+          console.log("🔧 Params:", params);
+          
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          const result = stmt.step();
+          
+          // Get the last insert rowid
+          const lastID = realDb.exec("SELECT last_insert_rowid() as id")[0]?.values[0]?.[0] as number || 0;
+          
+          console.log("🔧 Insert result - lastID:", lastID);
+          
+          stmt.free();
+          
+          // Save database after modification
+          const data = realDb.export();
+          fs.writeFileSync(dbPath, data);
+          console.log("💾 Database saved to file");
+          
+          if (callback) {
+            callback.call({ lastID }, null);
+          }
+          
+          return { lastID };
+        } catch (err: any) {
+          console.error("🔧 Database run error:", err);
+          if (callback) {
+            callback.call({}, err);
+          }
+          throw err;
+        }
+      },
+      
+      get(sql: string, params: any[], callback: (err: Error | null, row?: any) => void) {
+        try {
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          
+          let row: any = null;
+          if (stmt.step()) {
+            const columns = stmt.getColumnNames();
+            const values = stmt.get();
+            row = {};
+            columns.forEach((col, index) => {
+              row[col] = values[index];
+            });
+          }
+          
+          stmt.free();
+          callback(null, row);
+        } catch (err: any) {
+          callback(err, undefined);
+        }
+      },
+      
+      all(sql: string, params: any[], callback: (err: Error | null, rows?: any[]) => void) {
+        try {
+          const stmt = realDb.prepare(sql);
+          stmt.bind(params);
+          
+          const rows: any[] = [];
+          const columns = stmt.getColumnNames();
+          
+          while (stmt.step()) {
+            const values = stmt.get();
+            const row: any = {};
+            columns.forEach((col, index) => {
+              row[col] = values[index];
+            });
+            rows.push(row);
+          }
+          
+          stmt.free();
+          callback(null, rows);
+        } catch (err: any) {
+          callback(err, undefined);
+        }
+      },
+      
+      serialize(callback: () => void) {
+        callback();
+      }
+    };
+    
+      // Assign the wrapper to db
+      db = dbWrapper;
+      
+      // Seed the database with sample data
+      seedDatabase(db);
+      
+      return db;
+    }
+  } catch (err: any) {
+    console.warn("sql.js not available or failed to initialize — falling back to in-memory DB.");
+    // fall through to in-memory fallback below
+  }
+
+  // In-memory fallback when sql.js is unavailable
+  const rows: any[] = [];
+  let autoId = 1;
+
+  db = {
+    run(sql: string, params: any[], cb?: (this: any, err: Error | null) => void) {
+      try {
+        if (/INSERT INTO Buyer/i.test(sql)) {
+          const [
+            commercial_registration_number,
+            commercial_phone_number,
+            industry,
+            company_name,
+            city,
+            logo,
+            account_name,
+            account_email,
+            account_phone,
+            account_password,
+            licenses,
+            certificates,
+          ] = params;
+
+          const row = {
+            id: autoId++,
+            commercial_registration_number,
+            commercial_phone_number,
+            industry,
+            company_name,
+            city,
+            logo,
+            account_name,
+            account_email,
+            account_phone,
+            account_password,
+            licenses,
+            certificates,
+            created_at: new Date().toISOString(),
+            updated_at: null,
+          };
+          rows.push(row);
+          if (cb) cb.call({ lastID: row.id }, null as any);
+        } else {
+          if (cb) cb(null as any);
+        }
+      } catch (e: any) {
+        if (cb) cb(e);
+      }
+      return { lastID: autoId - 1 };
+    },
+    get(sql: string, params: any[], cb: (err: Error | null, row?: any) => void) {
+      try {
+        const m = sql.match(/WHERE id = \?/i);
+        if (m) {
+          const id = params[0];
+          const found = rows.find((r) => r.id === id);
+          cb(null, found || null);
+          return;
+        }
+        cb(null, null);
+      } catch (e: any) {
+        cb(e, undefined);
+      }
+    },
+    all(_sql: string, _params: any[], cb: (err: Error | null, rows?: any[]) => void) {
+      cb(null, rows.slice());
+    },
+    serialize(cb: () => void) {
+      cb();
+    },
+  };
+
+  return db;
+}

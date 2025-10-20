@@ -1,0 +1,201 @@
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import multer from "multer";
+import { handleDemo } from "./routes/demo";
+import { initDatabase } from "./db";
+import { createBuyer, updateBuyer, getBuyerById } from "./routes/buyers";
+import { loginBuyer } from "./routes/buyer-auth";
+import { loginSupplier } from "./routes/supplier-auth";
+import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
+import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
+import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
+import { getRegions, getCitiesByRegion, getAllCities, getCityById } from './routes/locations';
+import { getTenders, getTenderById, createTender, updateTender, deleteTender, getTendersByDomain, downloadTenderFile1, downloadTenderFile2 } from './routes/tenders';
+import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier, downloadProposalFile, getProposalDetails } from './routes/proposals';
+import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus, awardTender, getAwardedSupplier, runUpdateExpiredTenders } from './routes/tender-status';
+import { getLicenses, getLicenseByCode } from './routes/licenses';
+import { getAllCertificates, getCertificateByCode } from './routes/certificates';
+import registrationsRouter from './routes/registrations';
+
+
+import { 
+  getBuyerLicenses, 
+  getBuyerCertificates, 
+  getSupplierLicenses, 
+  getSupplierCertificates,
+  addBuyerLicense,
+  removeBuyerLicense,
+  addBuyerCertificate,
+  removeBuyerCertificate,
+  addSupplierLicense,
+  removeSupplierLicense,
+  addSupplierCertificate,
+  removeSupplierCertificate,
+  getAllAvailableLicenses,
+  getAllAvailableCertificates
+} from './routes/company-profile';
+
+// Configure multer for file uploads (store in memory)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow PDF, Word, and common image formats
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif'
+    ];
+    
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, Word documents, and images are allowed.'));
+    }
+  }
+});
+
+export function createServer() {
+  const app = express();
+
+  // Middleware
+  app.use(cors());
+  app.use(express.json({ limit: '10mb' })); // Increase limit for Base64 images
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Example API routes
+  app.get("/api/ping", (_req, res) => {
+    const ping = process.env.PING_MESSAGE ?? "ping";
+    res.json({ message: ping });
+  });
+
+  app.get("/api/demo", handleDemo);
+  
+  // Mount routes first, initialize DB in background
+  app.post("/api/buyers", createBuyer);
+  app.get("/api/buyers/:id", getBuyerById);
+  app.put("/api/buyers/:id", updateBuyer);
+  app.post("/api/auth/login", loginBuyer);
+  app.post("/api/auth/supplier/login", loginSupplier);
+  
+  // Supplier routes
+  app.post("/api/suppliers", createSupplier);
+  app.get("/api/suppliers", getSuppliers);
+  app.get("/api/suppliers/:id", getSupplierById);
+  app.put("/api/suppliers/:id", updateSupplier);
+  app.delete("/api/suppliers/:id", deleteSupplier);
+  
+  // Domain routes
+  app.get("/api/domains", getDomains);
+  app.get("/api/domains/:domainId/sub-domains", getSubDomainsByDomain);
+  app.get("/api/sub-domains", getAllSubDomains);
+  
+  // Location routes
+  app.get("/api/regions", getRegions);
+  app.get("/api/regions/:regionId/cities", getCitiesByRegion);
+  app.get("/api/cities", getAllCities);
+  app.get("/api/cities/:id", getCityById);
+  
+  // Tender routes
+  app.get('/api/tenders', getTenders);
+  app.get('/api/tenders/:id', getTenderById);
+  app.get('/api/tenders/:id/file1', downloadTenderFile1);
+  app.get('/api/tenders/:id/file2', downloadTenderFile2);
+  app.post('/api/tenders', upload.fields([
+    { name: 'file1', maxCount: 1 },
+    { name: 'file2', maxCount: 1 }
+  ]), createTender);
+  app.put('/api/tenders/:id', updateTender);
+  app.delete('/api/tenders/:id', deleteTender);
+  app.get('/api/domains/:domainId/tenders', getTendersByDomain);
+  
+    // Tender status routes
+  app.get('/api/tenders-with-status', getTendersWithStatus);
+  app.post('/api/update-expired-tenders', updateExpiredTenders);
+  app.put('/api/tenders/:id/finish', finishTender);
+  app.get('/api/tender-status-stats', getTenderStatusStats);
+  app.get('/api/tenders/status/:statusId', getTendersByStatus);
+  app.post('/api/tenders/:tenderId/award', awardTender);
+  app.get('/api/tenders/:tenderId/awarded-supplier', getAwardedSupplier);
+  
+  // Proposals routes
+  app.post('/api/tenders/:tenderId/proposals', submitProposalWithFiles);
+  app.get('/api/tenders/:tenderId/proposals', getProposalsForTender);
+  app.get('/api/suppliers/:supplierId/proposals', getProposalsBySupplier);
+  app.get('/api/proposals/:proposalId', getProposalDetails);
+  app.get('/api/proposals/:proposalId/files/:fileType', downloadProposalFile);
+  
+  // Inquiries routes
+  app.get('/api/tenders/:id/inquiries', listInquiriesForTender);
+  app.post('/api/tenders/:id/inquiries', createInquiry);
+  app.post('/api/inquiries/:id/answer', answerInquiry);
+  
+  // License routes
+  app.get('/api/licenses', getLicenses);
+  app.get('/api/licenses/:code', getLicenseByCode);
+  
+  // Certificate routes
+  app.get('/api/certificates', getAllCertificates);
+  app.get('/api/certificates/:code', getCertificateByCode);
+
+  // Company profile routes
+  app.get('/api/buyers/:id/licenses', getBuyerLicenses);
+  app.get('/api/buyers/:id/certificates', getBuyerCertificates);
+  app.get('/api/suppliers/:id/licenses', getSupplierLicenses);
+  app.get('/api/suppliers/:id/certificates', getSupplierCertificates);
+  
+  // Add/remove licenses and certificates for buyers
+  app.post('/api/buyers/:id/licenses', addBuyerLicense);
+  app.delete('/api/buyers/:id/licenses/:licenseId', removeBuyerLicense);
+  app.post('/api/buyers/:id/certificates', addBuyerCertificate);
+  app.delete('/api/buyers/:id/certificates/:certificateId', removeBuyerCertificate);
+  
+  // Add/remove licenses and certificates for suppliers
+  app.post('/api/suppliers/:id/licenses', addSupplierLicense);
+  app.delete('/api/suppliers/:id/licenses/:licenseId', removeSupplierLicense);
+  app.post('/api/suppliers/:id/certificates', addSupplierCertificate);
+  app.delete('/api/suppliers/:id/certificates/:certificateId', removeSupplierCertificate);
+  
+  // Get all available licenses and certificates for selection
+  app.get('/api/available-licenses', getAllAvailableLicenses);
+  app.get('/api/available-certificates', getAllAvailableCertificates);
+
+
+
+  app.use('/api/registrations', registrationsRouter);
+
+
+
+
+  // Initialize DB in background
+  initDatabase()
+    .then(() => {
+      console.log("✅ Database initialized, running expired-tenders check on startup...");
+
+      // Run once immediately to catch any expired tenders
+      runUpdateExpiredTenders()
+        .then((count) => console.log(`⏱ Startup expired-tenders runner updated ${count} tenders`))
+        .catch((err) => console.error("❌ Error running startup expired-tenders runner:", err));
+
+      // Schedule periodic runner. Interval configurable via EXPIRED_TENDERS_INTERVAL_MINUTES (default 5 minutes)
+      const intervalMinutes = Number(process.env.EXPIRED_TENDERS_INTERVAL_MINUTES || '5');
+      const intervalMs = Math.max(1, intervalMinutes) * 60 * 1000;
+      setInterval(() => {
+        runUpdateExpiredTenders()
+          .then((count) => console.log(`⏱ Periodic expired-tenders runner updated ${count} tenders`))
+          .catch((err) => console.error("❌ Error running periodic expired-tenders runner:", err));
+      }, intervalMs);
+    })
+    .catch((error) => {
+      console.error("Failed to initialize database:", error);
+    });
+
+  return app;
+}
