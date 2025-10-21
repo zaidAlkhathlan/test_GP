@@ -102,7 +102,7 @@ model City {
 
 model Buyer {
   id                           Int        @id @default(autoincrement()) @map("ID")
-  commercialRegistrationNumber String     @unique @map("Commercial_registration_number")
+  commercialRegistrationNumber String     @map("Commercial_registration_number")
   commercialPhoneNumber        String     @map("Commercial_Phone_number")
   domainId                     Int        @map("domains_id")
   companyName                  String     @map("company_name")
@@ -130,7 +130,7 @@ model Buyer {
 
 model Supplier {
   id                           Int                 @id @default(autoincrement()) @map("ID")
-  commercialRegistrationNumber String              @unique @map("Commercial_registration_number")
+  commercialRegistrationNumber String              @map("Commercial_registration_number")
   commercialPhoneNumber        String              @map("Commercial_Phone_number")
   domainId                     Int                 @map("domains_id")
   createdAt                    DateTime            @default(now()) @map("created_at")

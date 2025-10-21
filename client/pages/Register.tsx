@@ -5,6 +5,11 @@ import { Domain, SubDomain, DomainsResponse, SubDomainsResponse } from "@shared/
 import LocationSelector from "../components/LocationSelector";
 import { Eye, EyeOff } from "lucide-react"; // make sure you have lucide-react installed
 
+type SelectOption = {
+  value: number;
+  label: string;
+};
+
 export default function Register() {
   // --- State for the new verification flow ---
   const [commercialRegNumber, setCommercialRegNumber] = useState("");
@@ -26,8 +31,10 @@ export default function Register() {
 
   const [activityDescription, setActivityDescription] = useState("");
 
-  const [certificates, setCertificates] = useState<{ value: string; label: string }[]>([]);
-  const [licenses, setLicenses] = useState<{ value: string; label: string }[]>([]);
+  const [certificateOptions, setCertificateOptions] = useState<SelectOption[]>([]);
+  const [licenseOptions, setLicenseOptions] = useState<SelectOption[]>([]);
+  const [certificates, setCertificates] = useState<SelectOption[]>([]);
+  const [licenses, setLicenses] = useState<SelectOption[]>([]);
   const [coordinatorName, setCoordinatorName] = useState("");
   const [coordinatorEmail, setCoordinatorEmail] = useState("");
   const [coordinatorMobile, setCoordinatorMobile] = useState("");
@@ -37,124 +44,128 @@ export default function Register() {
   const [filteredSubDomains, setFilteredSubDomains] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
-
-    const [coordinatorPassword, setCoordinatorPassword] = useState("");
+  const [coordinatorPassword, setCoordinatorPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResendDisabled, setIsResendDisabled] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-const [isVerifying, setIsVerifying] = useState(false);
-const [isResendDisabled, setIsResendDisabled] = useState(false);
-const [resendCountdown, setResendCountdown] = useState(0);
-const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const handleVerifyCrNumber = async () => {
+    if (!commercialRegNumber || isVerifying) return; // prevent spam
 
-const handleVerifyCrNumber = async () => {
-  if (!commercialRegNumber || isVerifying) return; // prevent spam
-
-  setIsVerifying(true);
-  setVerificationError("");
-  setVerificationMessage("");
-
-  try {
-    // 1️⃣ Verify CR
-    const verifyRes = await fetch(`/api/registrations/verify/${commercialRegNumber}`);
-    const verifyData = await verifyRes.json();
-    if (!verifyRes.ok) throw new Error(verifyData.message || "رقم السجل التجاري غير موجود.");
-
-    const phone = verifyData.phoneNumber;
-    setInstitutionName(verifyData.name);
-    setMobileNumber(phone);
-
-    // 2️⃣ Send OTP
-    const sendRes = await fetch(`/api/registrations/send-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
-
-    const sendData = await sendRes.json();
-    if (!sendRes.ok || !sendData.success)
-      throw new Error(sendData.message || "فشل في إرسال رمز التحقق.");
-
-    // 3️⃣ Success
-    const lastFour = phone.slice(-4);
-    setVerificationMessage(`تم إرسال رمز التحقق إلى الرقم المنتهي بـ ******${lastFour}`);
-    setIsCrVerified(true);
-  } catch (err: any) {
-    console.error("❌ Verification error:", err);
-    setVerificationError(err.message);
-  } finally {
-    setIsVerifying(false);
-  }
-};
-
-const handleResendOtp = async () => {
-  if (isResendDisabled) return; // prevent spam
-
-  setIsResendDisabled(true);
-  setResendCountdown(20);
-
-  const timer = setInterval(() => {
-    setResendCountdown((prev) => {
-      if (prev <= 1) {
-        clearInterval(timer);
-        setIsResendDisabled(false);
-        return 0;
-      }
-      return prev - 1;
-    });
-  }, 1000);
-
-  try {
-    const sendRes = await fetch(`/api/registrations/send-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: mobileNumber }),
-    });
-
-    const sendData = await sendRes.json();
-    if (!sendRes.ok || !sendData.success)
-      throw new Error(sendData.message || "فشل في إرسال رمز التحقق.");
-
-    setVerificationMessage("تم إرسال رمز جديد بنجاح.");
+    setIsVerifying(true);
+    setIsCrVerified(false);
+    setIsOtpVerified(false);
     setVerificationError("");
-  } catch (err: any) {
-    console.error("❌ Resend error:", err);
-    setVerificationError(err.message);
-    setIsResendDisabled(false);
-    setResendCountdown(0);
-  }
-};
+    setVerificationMessage("");
 
+    try {
+      // 1️⃣ Verify CR
+      const verifyRes = await fetch(`/api/registrations/verify/${commercialRegNumber}`);
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.message || "رقم السجل التجاري غير موجود.");
 
-const handleVerifyOtp = async () => {
-  if (!otpCode || isVerifyingOtp) return; // prevent double click
-  setVerificationError("");
-  setIsVerifyingOtp(true);
+      const phone = verifyData.phoneNumber;
+      setInstitutionName(verifyData.name);
+      setMobileNumber(phone);
 
-  try {
-    const response = await fetch(`/api/registrations/verify-otp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phoneNumber: mobileNumber,
-        otpCode,
-      }),
-    });
+      // 2️⃣ Send OTP
+      const sendRes = await fetch(`/api/registrations/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
 
-    const data = await response.json();
-    if (!response.ok || !data.success)
-      throw new Error(data.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.");
+      const sendData = await sendRes.json();
+      if (!sendRes.ok || !sendData.success)
+        throw new Error(sendData.message || "فشل في إرسال رمز التحقق.");
 
-    setVerificationMessage("✅ تم التحقق بنجاح!");
+      // 3️⃣ Success
+      const lastFour = phone.slice(-4);
+      setVerificationMessage(`تم إرسال رمز التحقق إلى الرقم المنتهي بـ ******${lastFour}`);
+      setIsCrVerified(true);
+    } catch (err: any) {
+      console.error("❌ Verification error:", err);
+      setVerificationError(err.message);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (isResendDisabled) return; // prevent spam
+
+    setIsResendDisabled(true);
+    setResendCountdown(20);
+    setIsOtpVerified(false);
+
+    const timer = setInterval(() => {
+      setResendCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    try {
+      const sendRes = await fetch(`/api/registrations/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: mobileNumber }),
+      });
+
+      const sendData = await sendRes.json();
+      if (!sendRes.ok || !sendData.success)
+        throw new Error(sendData.message || "فشل في إرسال رمز التحقق.");
+
+      setVerificationMessage("تم إرسال رمز جديد بنجاح.");
+      setVerificationError("");
+    } catch (err: any) {
+      console.error("❌ Resend error:", err);
+      setVerificationError(err.message);
+      setIsResendDisabled(false);
+      setResendCountdown(0);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpCode || isVerifyingOtp) return; // prevent double click
     setVerificationError("");
-    setTimeout(() => setCurrentStep(2), 800);
-  } catch (error: any) {
-    console.error("❌ OTP Verify Error:", error);
-    setVerificationError(error.message);
-  } finally {
-    setIsVerifyingOtp(false);
-  }
-};
+    setIsVerifyingOtp(true);
+
+    try {
+      const response = await fetch(`/api/registrations/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: mobileNumber,
+          otpCode,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success)
+        throw new Error(data.message || "رمز التحقق غير صحيح أو منتهي الصلاحية.");
+
+      setVerificationMessage("✅ تم التحقق بنجاح!");
+      setVerificationError("");
+      setIsOtpVerified(true);
+      clearError('step1');
+      setTimeout(() => setCurrentStep(2), 800);
+    } catch (error: any) {
+      console.error("❌ OTP Verify Error:", error);
+      setVerificationError(error.message);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
 
 
@@ -194,6 +205,45 @@ const handleVerifyOtp = async () => {
     fetchAllSubDomains();
   }, []);
 
+  useEffect(() => {
+    const fetchLicenses = async () => {
+      try {
+        const response = await fetch('/api/licenses');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch licenses: ${response.status}`);
+        }
+        const data: Array<{ id: number; name_ar?: string; name_en?: string; code?: string }> = await response.json();
+        const options = data.map((license) => ({
+          value: license.id,
+          label: license.name_ar || license.name_en || license.code || `ترخيص رقم ${license.id}`,
+        }));
+        setLicenseOptions(options);
+      } catch (error) {
+        console.error('Error fetching licenses:', error);
+      }
+    };
+
+    const fetchCertificates = async () => {
+      try {
+        const response = await fetch('/api/certificates');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch certificates: ${response.status}`);
+        }
+        const data: Array<{ id: number; name_ar?: string; name_en?: string; code?: string }> = await response.json();
+        const options = data.map((certificate) => ({
+          value: certificate.id,
+          label: certificate.name_ar || certificate.name_en || certificate.code || `شهادة رقم ${certificate.id}`,
+        }));
+        setCertificateOptions(options);
+      } catch (error) {
+        console.error('Error fetching certificates:', error);
+      }
+    };
+
+    fetchLicenses();
+    fetchCertificates();
+  }, []);
+
   // Filter sub-domains when domain is selected
   useEffect(() => {
     if (selectedDomain && allSubDomains.length > 0) {
@@ -207,14 +257,7 @@ const handleVerifyOtp = async () => {
     }
   }, [selectedDomain, allSubDomains]);
 
-  const certificateOptions: { value: string; label: string }[] = Array.from({ length: 100 }, (_, i) => ({ value: `cert${i+1}`, label: `شهادة رقم ${i+1}` }));
-  const licenseOptions: { value: string; label: string }[] = Array.from({ length: 100 }, (_, i) => ({ value: `license${i+1}`, label: `ترخيص رقم ${i+1}` }));
   const steps = [1, 2, 3, 4, 5];
-
-
-  const [verifiedPhoneNumber, setVerifiedPhoneNumber] = useState("");
-
-
 const extractNumericIds = (items: { value: string | number }[]) =>
   items
     .map((item) => {
@@ -224,7 +267,105 @@ const extractNumericIds = (items: { value: string | number }[]) =>
     })
     .filter((value): value is number => value !== null);
 
+const isTruthyNumber = (value: number | null | undefined) => typeof value === "number" && value > 0;
+
+const clearError = (field: string) => {
+  setErrors((prev) => {
+    if (!prev[field]) {
+      return prev;
+    }
+    const { [field]: _removed, ...rest } = prev;
+    return rest;
+  });
+};
+
+const validateStep = (step: number): Record<string, string> => {
+  const stepErrors: Record<string, string> = {};
+
+  switch (step) {
+    case 1: {
+      if (!isCrVerified || !isOtpVerified) {
+        stepErrors.step1 = "الرجاء التحقق من السجل التجاري وإدخال رمز التحقق قبل المتابعة.";
+      }
+      break;
+    }
+    case 2: {
+      if (!institutionType) {
+        stepErrors.institutionType = "يرجى اختيار نوع التسجيل قبل المتابعة.";
+      }
+      break;
+    }
+    case 3: {
+      if (!isTruthyNumber(selectedRegionId)) {
+        stepErrors.selectedRegionId = "الرجاء اختيار المنطقة.";
+      }
+      if (!isTruthyNumber(selectedCityId)) {
+        stepErrors.selectedCityId = "الرجاء اختيار المدينة.";
+      }
+      if (!selectedDomain) {
+        stepErrors.selectedDomain = "الرجاء اختيار النشاط الرئيسي.";
+      }
+      if (filteredSubDomains.length > 0 && selectedSubDomains.length === 0) {
+        stepErrors.selectedSubDomains = "الرجاء اختيار نشاط فرعي واحد على الأقل.";
+      }
+      break;
+    }
+    case 4: {
+      if (!activityDescription.trim()) {
+        stepErrors.activityDescription = "يرجى وصف نشاط المؤسسة قبل المتابعة.";
+      }
+      break;
+    }
+    case 5: {
+      if (!coordinatorName.trim()) {
+        stepErrors.coordinatorName = "اسم المنسق مطلوب.";
+      }
+      if (!coordinatorEmail.trim()) {
+        stepErrors.coordinatorEmail = "البريد الإلكتروني للمنسق مطلوب.";
+      } else if (!coordinatorEmail.includes("@")) {
+        stepErrors.coordinatorEmail = "الرجاء إدخال بريد إلكتروني صالح يحتوي على @.";
+      }
+      if (!coordinatorPassword.trim()) {
+        stepErrors.coordinatorPassword = "كلمة المرور مطلوبة.";
+      }
+      if (!coordinatorMobile.trim()) {
+        stepErrors.coordinatorMobile = "رقم الجوال مطلوب.";
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  return stepErrors;
+};
+
+const isStepComplete = (step: number) => Object.keys(validateStep(step)).length === 0;
+
+const handleNext = () => {
+  const stepErrors = validateStep(currentStep);
+  if (Object.keys(stepErrors).length > 0) {
+    setErrors(stepErrors);
+    return;
+  }
+  setErrors({});
+  setCurrentStep((prev) => Math.min(prev + 1, 5));
+};
+
+const handlePrev = () => {
+  setErrors({});
+  setCurrentStep((prev) => Math.max(prev - 1, 1));
+};
+
 const handleSubmit = async () => {
+  const submissionErrors = validateStep(5);
+  if (Object.keys(submissionErrors).length > 0) {
+    setErrors(submissionErrors);
+    return;
+  }
+
+  setErrors({});
+
   const payload = {
     institutionType,
     commercialRegNumber,
@@ -259,6 +400,9 @@ const handleSubmit = async () => {
     alert(`❌ فشل التسجيل: ${err.message}`);
   }
 };
+
+  const canProceed = isStepComplete(currentStep);
+  const canSubmit = currentStep === 5 && isStepComplete(5);
 
 
 
@@ -342,7 +486,10 @@ const handleSubmit = async () => {
         <input
           type="text"
           value={otpCode}
-          onChange={(e) => setOtpCode(e.target.value)}
+          onChange={(e) => {
+            setOtpCode(e.target.value);
+            clearError('step1');
+          }}
           placeholder="أدخل رقم OTP المرسل إلى رقم الجوال المسجل"
           className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
           dir="rtl"
@@ -371,6 +518,9 @@ const handleSubmit = async () => {
         </div>
       </div>
     )}
+    {errors.step1 && (
+      <p className="text-sm text-red-600 text-right font-arabic">{errors.step1}</p>
+    )}
   </>
 
   ) : currentStep === 2 ? (
@@ -386,6 +536,7 @@ const handleSubmit = async () => {
       <button
         onClick={() => {
           setInstitutionType("buyer");
+          clearError('institutionType');
           setCurrentStep(3);
         }}
         className={`w-64 py-4 border rounded-xl text-lg font-arabic transition-all ${
@@ -400,6 +551,7 @@ const handleSubmit = async () => {
       <button
         onClick={() => {
           setInstitutionType("supplier");
+          clearError('institutionType');
           setCurrentStep(3);
         }}
         className={`w-64 py-4 border rounded-xl text-lg font-arabic transition-all ${
@@ -411,6 +563,9 @@ const handleSubmit = async () => {
         مورد
       </button>
     </div>
+    {errors.institutionType && (
+      <p className="text-sm text-red-600 text-right font-arabic">{errors.institutionType}</p>
+    )}
   </>
 
   ) : currentStep === 3 ? (
@@ -439,10 +594,30 @@ const handleSubmit = async () => {
       <LocationSelector
         regionId={selectedRegionId}
         cityId={selectedCityId}
-        onRegionChange={setSelectedRegionId}
-        onCityChange={setSelectedCityId}
+        onRegionChange={(id) => {
+          setSelectedRegionId(id);
+          if (id > 0) {
+            clearError('selectedRegionId');
+          }
+        }}
+        onCityChange={(id) => {
+          setSelectedCityId(id);
+          if (id > 0) {
+            clearError('selectedCityId');
+          }
+        }}
         required
       />
+      {(errors.selectedRegionId || errors.selectedCityId) && (
+        <div className="mt-2 space-y-1 text-right">
+          {errors.selectedRegionId && (
+            <p className="text-sm text-red-600 font-arabic">{errors.selectedRegionId}</p>
+          )}
+          {errors.selectedCityId && (
+            <p className="text-sm text-red-600 font-arabic">{errors.selectedCityId}</p>
+          )}
+        </div>
+      )}
     </div>
 
     {/* Domain */}
@@ -453,7 +628,11 @@ const handleSubmit = async () => {
       <div className="relative">
         <select
           value={selectedDomain}
-          onChange={(e) => setSelectedDomain(e.target.value)}
+          onChange={(e) => {
+            setSelectedDomain(e.target.value);
+            clearError('selectedDomain');
+            clearError('selectedSubDomains');
+          }}
           className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg
           focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm appearance-none bg-white"
           dir="rtl"
@@ -476,6 +655,9 @@ const handleSubmit = async () => {
           </svg>
         </div>
       </div>
+      {errors.selectedDomain && (
+        <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.selectedDomain}</p>
+      )}
     </div>
 
     {/* Subdomain */}
@@ -487,9 +669,10 @@ const handleSubmit = async () => {
         isMulti
         options={filteredSubDomains}
         value={selectedSubDomains}
-        onChange={(selected: any) =>
-          setSelectedSubDomains(selected ? [...selected] : [])
-        }
+        onChange={(selected: any) => {
+          setSelectedSubDomains(selected ? [...selected] : []);
+          clearError('selectedSubDomains');
+        }}
         placeholder={
           selectedDomain ? "اختر الأنشطة الفرعية..." : "اختر النشاط الرئيسي أولاً"
         }
@@ -512,6 +695,9 @@ const handleSubmit = async () => {
           }),
         }}
       />
+      {errors.selectedSubDomains && (
+        <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.selectedSubDomains}</p>
+      )}
     </div>
 
     {/* Mobile Number */}
@@ -612,13 +798,19 @@ const handleSubmit = async () => {
       </label>
       <textarea
         value={activityDescription}
-        onChange={(e) => setActivityDescription(e.target.value)}
+        onChange={(e) => {
+          setActivityDescription(e.target.value);
+          clearError('activityDescription');
+        }}
         placeholder="اكتب وصفاً مفصلاً للمؤسسة ونشاطها..."
         rows={6}
         className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg
         focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm resize-none"
         dir="rtl"
       />
+      {errors.activityDescription && (
+        <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.activityDescription}</p>
+      )}
     </div>
   </>
 
@@ -635,11 +827,17 @@ const handleSubmit = async () => {
                     <input
                       type="text"
                       value={coordinatorName}
-                      onChange={(e) => setCoordinatorName(e.target.value)}
+                      onChange={(e) => {
+                        setCoordinatorName(e.target.value);
+                        clearError('coordinatorName');
+                      }}
                       placeholder="أدخل اسم ممثل المؤسسة"
                       className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                       dir="rtl"
                     />
+                    {errors.coordinatorName && (
+                      <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.coordinatorName}</p>
+                    )}
                   </div>
 
                   <div className="mb-4">
@@ -647,53 +845,64 @@ const handleSubmit = async () => {
                     <input
                       type="email"
                       value={coordinatorEmail}
-                      onChange={(e) => setCoordinatorEmail(e.target.value)}
+                      onChange={(e) => {
+                        setCoordinatorEmail(e.target.value);
+                        clearError('coordinatorEmail');
+                      }}
                       placeholder="example@domain.com"
                       className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                       dir="rtl"
                     />
+                    {errors.coordinatorEmail && (
+                      <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.coordinatorEmail}</p>
+                    )}
                   </div>
+                  <div className="mb-4 relative">
+                    <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
+                      كلمة المرور *
+                    </label>
 
-
-<div className="mb-4 relative">
-  <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">
-    كلمة المرور *
-  </label>
-
-  <div className="relative flex items-center">
-    <input
-      type={showPassword ? "text" : "password"}
-      value={coordinatorPassword}
-      onChange={(e) => setCoordinatorPassword(e.target.value)}
-      placeholder="••••••••••"
-      className="w-full  py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm pr-2"
-      dir="rtl"
-    />
-    <button
-      type="button"
-      onClick={() => setShowPassword((prev) => !prev)}
-      className="absolute left-3 flex items-center justify-center text-gray-500 hover:text-gray-700 h-full"
-    >
-      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-    </button>
-  </div>
-</div>
-
-
-
-
-
+                    <div className="relative flex items-center">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={coordinatorPassword}
+                        onChange={(e) => {
+                          setCoordinatorPassword(e.target.value);
+                          clearError('coordinatorPassword');
+                        }}
+                        placeholder="••••••••••"
+                        className="w-full py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm pr-2"
+                        dir="rtl"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute left-3 flex items-center justify-center text-gray-500 hover:text-gray-700 h-full"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {errors.coordinatorPassword && (
+                      <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.coordinatorPassword}</p>
+                    )}
+                  </div>
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-tawreed-text-dark mb-2 text-right font-arabic">رقم الجوال *</label>
                     <input
                       type="tel"
                       value={coordinatorMobile}
-                      onChange={(e) => setCoordinatorMobile(e.target.value)}
+                      onChange={(e) => {
+                        setCoordinatorMobile(e.target.value);
+                        clearError('coordinatorMobile');
+                      }}
                       placeholder="05xxxxxxxx"
                       className="w-full px-3 py-2.5 text-right border border-tawreed-border-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-tawreed-green focus:border-transparent font-arabic text-sm"
                       dir="rtl"
                     />
+                    {errors.coordinatorMobile && (
+                      <p className="mt-2 text-sm text-red-600 text-right font-arabic">{errors.coordinatorMobile}</p>
+                    )}
                   </div>
                 </div>
               </>
@@ -703,13 +912,35 @@ const handleSubmit = async () => {
           {/* Action Buttons */}
           <div className="flex justify-between items-center">
             {currentStep < 5 ? (
-              <button onClick={() => setCurrentStep(Math.min(currentStep + 1, 5))} className="px-4 py-2.5 bg-gradient-to-r from-tawreed-green to-tawreed-green-light text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all">التالي</button>
+              <button
+                onClick={handleNext}
+                aria-disabled={!canProceed}
+                className={`px-4 py-2.5 bg-gradient-to-r from-tawreed-green to-tawreed-green-light text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all ${
+                  !canProceed ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                التالي
+              </button>
             ) : (
-              <button onClick={handleSubmit} className="px-4 py-2.5 bg-tawreed-green text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all">إنهاء التسجيل</button>
+              <button
+                onClick={handleSubmit}
+                aria-disabled={!canSubmit}
+                className={`px-4 py-2.5 bg-tawreed-green text-white rounded-lg font-medium text-sm font-arabic hover:shadow-md transition-all ${
+                  !canSubmit ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                إنهاء التسجيل
+              </button>
             )}
             <div className="flex gap-2">
               <Link to="/" className="px-6 py-2.5 bg-white text-tawreed-text-dark border border-tawreed-border-gray rounded-lg font-medium text-sm font-arabic hover:bg-gray-50 transition-colors">تسجيل الدخول</Link>
-              <button onClick={() => setCurrentStep(Math.max(currentStep - 1, 1))} disabled={currentStep === 1} className="px-4 py-2.5 bg-white text-tawreed-text-dark border border-tawreed-border-gray rounded-lg font-medium text-sm font-arabic hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">السابق</button>
+              <button
+                onClick={handlePrev}
+                disabled={currentStep === 1}
+                className="px-4 py-2.5 bg-white text-tawreed-text-dark border border-tawreed-border-gray rounded-lg font-medium text-sm font-arabic hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
             </div>
           </div>
         </div>
