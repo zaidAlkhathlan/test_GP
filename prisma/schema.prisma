@@ -416,3 +416,5 @@ model OfferFile {
 
   @@map("offer_files")
 }
+
+

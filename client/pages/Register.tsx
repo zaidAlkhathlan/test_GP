@@ -13,6 +13,7 @@ export default function Register() {
   const [verificationError, setVerificationError] = useState("");
   // --- End of new state ---
 
+
   const [currentStep, setCurrentStep] = useState(1);
   const [otpCode, setOtpCode] = useState("");
   const [institutionName, setInstitutionName] = useState("");
