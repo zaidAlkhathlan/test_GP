@@ -1,332 +1,327 @@
 import { RequestHandler } from "express";
-import { db } from "../db";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
 
-// Get buyer licenses
-export const getBuyerLicenses: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const getBuyerLicenses: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
 
-  const statement = `
-    SELECT l.ID as id, l.Name as name, l.name_ar, l.name_en, l.description_ar, l.description_en, l.category
-    FROM Licenses l
-    INNER JOIN Buyer_Licenses bl ON l.ID = bl.license_id
-    WHERE bl.buyer_id = ?
-  `;
+  try {
+    const licenses = await prisma.buyerLicense.findMany({
+      where: { buyerId },
+      include: { license: true },
+    });
 
-  db.all(statement, [id], (err, licenses) => {
-    if (err) {
-      console.error('❌ Error fetching buyer licenses:', err);
-      return res.status(500).json({ error: 'Failed to fetch buyer licenses' });
-    }
-
-    console.log(`✅ Found ${licenses?.length || 0} licenses for buyer ${id}`);
-    res.json(licenses || []);
-  });
+    res.json(
+      licenses.map((entry) => ({
+        id: entry.licenseId,
+        name: entry.license?.name ?? entry.license?.nameEn ?? entry.license?.nameAr ?? null,
+        name_ar: entry.license?.nameAr ?? entry.license?.name ?? entry.license?.nameEn ?? null,
+        name_en: entry.license?.nameEn ?? entry.license?.name ?? entry.license?.nameAr ?? null,
+        description_ar: entry.license?.descriptionAr ?? null,
+        description_en: entry.license?.descriptionEn ?? null,
+        category: entry.license?.category ?? null,
+        code: entry.license?.code ?? entry.license?.name ?? undefined,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching buyer licenses:", error);
+    res.status(500).json({ error: "Failed to fetch buyer licenses" });
+  }
 };
 
-// Get buyer certificates
-export const getBuyerCertificates: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const getBuyerCertificates: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
 
-  const statement = `
-    SELECT c.ID as id, c.Name as name
-    FROM Certificates c
-    INNER JOIN Buyer_Certificates bc ON c.ID = bc.certificate_id
-    WHERE bc.buyer_id = ?
-  `;
+  try {
+    const certificates = await prisma.buyerCertificate.findMany({
+      where: { buyerId },
+      include: { certificate: true },
+    });
 
-  db.all(statement, [id], (err, certificates) => {
-    if (err) {
-      console.error('❌ Error fetching buyer certificates:', err);
-      return res.status(500).json({ error: 'Failed to fetch buyer certificates' });
-    }
-
-    console.log(`✅ Found ${certificates?.length || 0} certificates for buyer ${id}`);
-    res.json(certificates || []);
-  });
+    res.json(
+      certificates.map((entry) => ({
+        id: entry.certificateId,
+        name: entry.certificate?.name ?? null,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching buyer certificates:", error);
+    res.status(500).json({ error: "Failed to fetch buyer certificates" });
+  }
 };
 
-// Get supplier licenses (from relational tables)
-export const getSupplierLicenses: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const getSupplierLicenses: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
 
-  const statement = `
-    SELECT 
-      l.ID as id, 
-      l.Name as name, 
-      l.name_ar, 
-      l.name_en, 
-      l.description_ar, 
-      l.description_en, 
-      l.category,
-      l.code
-    FROM Supplier_Licenses sl
-    JOIN Licenses l ON sl.license_id = l.ID
-    WHERE sl.supplier_id = ?
-  `;
-  
-  db.all(statement, [id], (err, licenses) => {
-    if (err) {
-      console.error('❌ Error fetching supplier licenses:', err);
-      return res.status(500).json({ error: 'Failed to fetch supplier licenses' });
-    }
+  try {
+    const licenses = await prisma.supplierLicense.findMany({
+      where: { supplierId },
+      include: { license: true },
+    });
 
-    console.log(`✅ Found ${licenses?.length || 0} licenses for supplier ${id}`);
-    res.json(licenses || []);
-  });
+    res.json(
+      licenses.map((entry) => ({
+        id: entry.licenseId,
+        name: entry.license?.name ?? entry.license?.nameEn ?? entry.license?.nameAr ?? null,
+        name_ar: entry.license?.nameAr ?? entry.license?.name ?? entry.license?.nameEn ?? null,
+        name_en: entry.license?.nameEn ?? entry.license?.name ?? entry.license?.nameAr ?? null,
+        description_ar: entry.license?.descriptionAr ?? null,
+        description_en: entry.license?.descriptionEn ?? null,
+        category: entry.license?.category ?? null,
+        code: entry.license?.code ?? entry.license?.name ?? undefined,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching supplier licenses:", error);
+    res.status(500).json({ error: "Failed to fetch supplier licenses" });
+  }
 };
 
-// Get supplier certificates (from relational tables)
-export const getSupplierCertificates: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const getSupplierCertificates: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
 
-  const statement = `
-    SELECT 
-      c.ID as id, 
-      c.Name as name
-    FROM Supplier_Certificates sc
-    JOIN Certificates c ON sc.certificate_id = c.ID
-    WHERE sc.supplier_id = ?
-  `;
-  
-  db.all(statement, [id], (err, certificates) => {
-    if (err) {
-      console.error('❌ Error fetching supplier certificates:', err);
-      return res.status(500).json({ error: 'Failed to fetch supplier certificates' });
-    }
+  try {
+    const certificates = await prisma.supplierCertificate.findMany({
+      where: { supplierId },
+      include: { certificate: true },
+    });
 
-    console.log(`✅ Found ${certificates?.length || 0} certificates for supplier ${id}`);
-    res.json(certificates || []);
-  });
+    res.json(
+      certificates.map((entry) => ({
+        id: entry.certificateId,
+        name: entry.certificate?.name ?? null,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching supplier certificates:", error);
+    res.status(500).json({ error: "Failed to fetch supplier certificates" });
+  }
 };
 
-// Add license to buyer
-export const addBuyerLicense: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { licenseId } = req.body;
+export const addBuyerLicense: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
+  const { licenseId } = req.body as { licenseId: number };
 
   if (!licenseId) {
-    return res.status(400).json({ error: 'License ID is required' });
+    return res.status(400).json({ error: "License ID is required" });
   }
 
-  // Check if relationship already exists
-  const checkStatement = `SELECT 1 FROM Buyer_Licenses WHERE buyer_id = ? AND license_id = ?`;
-  db.get(checkStatement, [id, licenseId], (err, existing) => {
-    if (err) {
-      console.error('❌ Error checking existing license:', err);
-      return res.status(500).json({ error: 'Failed to check existing license' });
-    }
-
-    if (existing) {
-      return res.status(409).json({ error: 'License already added to this buyer' });
-    }
-
-    // Add the license
-    const insertStatement = `INSERT INTO Buyer_Licenses (buyer_id, license_id) VALUES (?, ?)`;
-    db.run(insertStatement, [id, licenseId], function(insertErr) {
-      if (insertErr) {
-        console.error('❌ Error adding buyer license:', insertErr);
-        return res.status(500).json({ error: 'Failed to add license' });
-      }
-
-      console.log(`✅ Added license ${licenseId} to buyer ${id}`);
-      res.json({ success: true, message: 'License added successfully' });
+  try {
+    await prisma.buyerLicense.create({
+      data: {
+        buyerId,
+        licenseId,
+      },
     });
-  });
-};
 
-// Remove license from buyer
-export const removeBuyerLicense: RequestHandler = (req, res) => {
-  const { id, licenseId } = req.params;
-
-  const deleteStatement = `DELETE FROM Buyer_Licenses WHERE buyer_id = ? AND license_id = ?`;
-  db.run(deleteStatement, [id, licenseId], function(err) {
-    if (err) {
-      console.error('❌ Error removing buyer license:', err);
-      return res.status(500).json({ error: 'Failed to remove license' });
+    res.json({ success: true, message: "License added successfully" });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(409).json({ error: "License already added to this buyer" });
     }
 
-    console.log(`✅ Removed license ${licenseId} from buyer ${id}`);
-    res.json({ success: true, message: 'License removed successfully' });
-  });
+    console.error("❌ Error adding buyer license:", error);
+    res.status(500).json({ error: "Failed to add license" });
+  }
 };
 
-// Add certificate to buyer
-export const addBuyerCertificate: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { certificateId } = req.body;
+export const removeBuyerLicense: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
+  const licenseId = Number(req.params.licenseId);
+
+  try {
+    await prisma.buyerLicense.delete({
+      where: {
+        buyerId_licenseId: {
+          buyerId,
+          licenseId,
+        },
+      },
+    });
+
+    res.json({ success: true, message: "License removed successfully" });
+  } catch (error) {
+    console.error("❌ Error removing buyer license:", error);
+    res.status(500).json({ error: "Failed to remove license" });
+  }
+};
+
+export const addBuyerCertificate: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
+  const { certificateId } = req.body as { certificateId: number };
 
   if (!certificateId) {
-    return res.status(400).json({ error: 'Certificate ID is required' });
+    return res.status(400).json({ error: "Certificate ID is required" });
   }
 
-  // Check if relationship already exists
-  const checkStatement = `SELECT 1 FROM Buyer_Certificates WHERE buyer_id = ? AND certificate_id = ?`;
-  db.get(checkStatement, [id, certificateId], (err, existing) => {
-    if (err) {
-      console.error('❌ Error checking existing certificate:', err);
-      return res.status(500).json({ error: 'Failed to check existing certificate' });
-    }
-
-    if (existing) {
-      return res.status(409).json({ error: 'Certificate already added to this buyer' });
-    }
-
-    // Add the certificate
-    const insertStatement = `INSERT INTO Buyer_Certificates (buyer_id, certificate_id) VALUES (?, ?)`;
-    db.run(insertStatement, [id, certificateId], function(insertErr) {
-      if (insertErr) {
-        console.error('❌ Error adding buyer certificate:', insertErr);
-        return res.status(500).json({ error: 'Failed to add certificate' });
-      }
-
-      console.log(`✅ Added certificate ${certificateId} to buyer ${id}`);
-      res.json({ success: true, message: 'Certificate added successfully' });
+  try {
+    await prisma.buyerCertificate.create({
+      data: {
+        buyerId,
+        certificateId,
+      },
     });
-  });
-};
 
-// Remove certificate from buyer
-export const removeBuyerCertificate: RequestHandler = (req, res) => {
-  const { id, certificateId } = req.params;
-
-  const deleteStatement = `DELETE FROM Buyer_Certificates WHERE buyer_id = ? AND certificate_id = ?`;
-  db.run(deleteStatement, [id, certificateId], function(err) {
-    if (err) {
-      console.error('❌ Error removing buyer certificate:', err);
-      return res.status(500).json({ error: 'Failed to remove certificate' });
+    res.json({ success: true, message: "Certificate added successfully" });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(409).json({ error: "Certificate already added to this buyer" });
     }
 
-    console.log(`✅ Removed certificate ${certificateId} from buyer ${id}`);
-    res.json({ success: true, message: 'Certificate removed successfully' });
-  });
+    console.error("❌ Error adding buyer certificate:", error);
+    res.status(500).json({ error: "Failed to add certificate" });
+  }
 };
 
-// Get all available licenses (for selection)
-export const getAllAvailableLicenses: RequestHandler = (req, res) => {
-  const statement = `SELECT ID as id, Name as name, name_ar, name_en, category FROM Licenses ORDER BY Name`;
-  
-  db.all(statement, [], (err, licenses) => {
-    if (err) {
-      console.error('❌ Error fetching all licenses:', err);
-      return res.status(500).json({ error: 'Failed to fetch licenses' });
-    }
+export const removeBuyerCertificate: RequestHandler = async (req, res) => {
+  const buyerId = Number(req.params.id);
+  const certificateId = Number(req.params.certificateId);
 
-    res.json(licenses || []);
-  });
+  try {
+    await prisma.buyerCertificate.delete({
+      where: {
+        buyerId_certificateId: {
+          buyerId,
+          certificateId,
+        },
+      },
+    });
+
+    res.json({ success: true, message: "Certificate removed successfully" });
+  } catch (error) {
+    console.error("❌ Error removing buyer certificate:", error);
+    res.status(500).json({ error: "Failed to remove certificate" });
+  }
 };
 
-// Get all available certificates (for selection)
-export const getAllAvailableCertificates: RequestHandler = (req, res) => {
-  const statement = `SELECT ID as id, Name as name FROM Certificates ORDER BY Name`;
-  
-  db.all(statement, [], (err, certificates) => {
-    if (err) {
-      console.error('❌ Error fetching all certificates:', err);
-      return res.status(500).json({ error: 'Failed to fetch certificates' });
-    }
-
-    res.json(certificates || []);
-  });
-};
-
-// Add license to supplier
-export const addSupplierLicense: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { licenseId } = req.body;
+export const addSupplierLicense: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
+  const { licenseId } = req.body as { licenseId: number };
 
   if (!licenseId) {
-    return res.status(400).json({ error: 'License ID is required' });
+    return res.status(400).json({ error: "License ID is required" });
   }
 
-  // Check if relationship already exists
-  const checkStatement = `SELECT 1 FROM Supplier_Licenses WHERE supplier_id = ? AND license_id = ?`;
-  db.get(checkStatement, [id, licenseId], (err, existing) => {
-    if (err) {
-      console.error('❌ Error checking existing license:', err);
-      return res.status(500).json({ error: 'Failed to check existing license' });
-    }
-
-    if (existing) {
-      return res.status(409).json({ error: 'License already added to this supplier' });
-    }
-
-    // Add the license
-    const insertStatement = `INSERT INTO Supplier_Licenses (supplier_id, license_id) VALUES (?, ?)`;
-    db.run(insertStatement, [id, licenseId], function(insertErr) {
-      if (insertErr) {
-        console.error('❌ Error adding supplier license:', insertErr);
-        return res.status(500).json({ error: 'Failed to add license' });
-      }
-
-      console.log(`✅ Added license ${licenseId} to supplier ${id}`);
-      res.json({ success: true, message: 'License added successfully' });
+  try {
+    await prisma.supplierLicense.create({
+      data: {
+        supplierId,
+        licenseId,
+      },
     });
-  });
-};
 
-// Remove license from supplier
-export const removeSupplierLicense: RequestHandler = (req, res) => {
-  const { id, licenseId } = req.params;
-
-  const deleteStatement = `DELETE FROM Supplier_Licenses WHERE supplier_id = ? AND license_id = ?`;
-  db.run(deleteStatement, [id, licenseId], function(err) {
-    if (err) {
-      console.error('❌ Error removing supplier license:', err);
-      return res.status(500).json({ error: 'Failed to remove license' });
+    res.json({ success: true, message: "License added successfully" });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(409).json({ error: "License already added to this supplier" });
     }
 
-    console.log(`✅ Removed license ${licenseId} from supplier ${id}`);
-    res.json({ success: true, message: 'License removed successfully' });
-  });
+    console.error("❌ Error adding supplier license:", error);
+    res.status(500).json({ error: "Failed to add license" });
+  }
 };
 
-// Add certificate to supplier
-export const addSupplierCertificate: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  const { certificateId } = req.body;
+export const removeSupplierLicense: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
+  const licenseId = Number(req.params.licenseId);
+
+  try {
+    await prisma.supplierLicense.delete({
+      where: {
+        supplierId_licenseId: {
+          supplierId,
+          licenseId,
+        },
+      },
+    });
+
+    res.json({ success: true, message: "License removed successfully" });
+  } catch (error) {
+    console.error("❌ Error removing supplier license:", error);
+    res.status(500).json({ error: "Failed to remove license" });
+  }
+};
+
+export const addSupplierCertificate: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
+  const { certificateId } = req.body as { certificateId: number };
 
   if (!certificateId) {
-    return res.status(400).json({ error: 'Certificate ID is required' });
+    return res.status(400).json({ error: "Certificate ID is required" });
   }
 
-  // Check if relationship already exists
-  const checkStatement = `SELECT 1 FROM Supplier_Certificates WHERE supplier_id = ? AND certificate_id = ?`;
-  db.get(checkStatement, [id, certificateId], (err, existing) => {
-    if (err) {
-      console.error('❌ Error checking existing certificate:', err);
-      return res.status(500).json({ error: 'Failed to check existing certificate' });
-    }
-
-    if (existing) {
-      return res.status(409).json({ error: 'Certificate already added to this supplier' });
-    }
-
-    // Add the certificate
-    const insertStatement = `INSERT INTO Supplier_Certificates (supplier_id, certificate_id) VALUES (?, ?)`;
-    db.run(insertStatement, [id, certificateId], function(insertErr) {
-      if (insertErr) {
-        console.error('❌ Error adding supplier certificate:', insertErr);
-        return res.status(500).json({ error: 'Failed to add certificate' });
-      }
-
-      console.log(`✅ Added certificate ${certificateId} to supplier ${id}`);
-      res.json({ success: true, message: 'Certificate added successfully' });
+  try {
+    await prisma.supplierCertificate.create({
+      data: {
+        supplierId,
+        certificateId,
+      },
     });
-  });
+
+    res.json({ success: true, message: "Certificate added successfully" });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(409).json({ error: "Certificate already added to this supplier" });
+    }
+
+    console.error("❌ Error adding supplier certificate:", error);
+    res.status(500).json({ error: "Failed to add certificate" });
+  }
 };
 
-// Remove certificate from supplier
-export const removeSupplierCertificate: RequestHandler = (req, res) => {
-  const { id, certificateId } = req.params;
+export const removeSupplierCertificate: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
+  const certificateId = Number(req.params.certificateId);
 
-  const deleteStatement = `DELETE FROM Supplier_Certificates WHERE supplier_id = ? AND certificate_id = ?`;
-  db.run(deleteStatement, [id, certificateId], function(err) {
-    if (err) {
-      console.error('❌ Error removing supplier certificate:', err);
-      return res.status(500).json({ error: 'Failed to remove certificate' });
-    }
+  try {
+    await prisma.supplierCertificate.delete({
+      where: {
+        supplierId_certificateId: {
+          supplierId,
+          certificateId,
+        },
+      },
+    });
 
-    console.log(`✅ Removed certificate ${certificateId} from supplier ${id}`);
-    res.json({ success: true, message: 'Certificate removed successfully' });
-  });
+    res.json({ success: true, message: "Certificate removed successfully" });
+  } catch (error) {
+    console.error("❌ Error removing supplier certificate:", error);
+    res.status(500).json({ error: "Failed to remove certificate" });
+  }
+};
+
+export const getAllAvailableLicenses: RequestHandler = async (_req, res) => {
+  try {
+    const licenses = await prisma.license.findMany({ orderBy: { name: "asc" } });
+
+    res.json(
+      licenses.map((license) => ({
+        id: license.id,
+        name: license.name ?? license.nameEn ?? license.nameAr ?? String(license.id),
+        name_ar: license.nameAr ?? license.name ?? license.nameEn ?? null,
+        name_en: license.nameEn ?? license.name ?? license.nameAr ?? null,
+        category: license.category ?? null,
+        code: license.code ?? license.name ?? undefined,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching licenses:", error);
+    res.status(500).json({ error: "Failed to fetch licenses" });
+  }
+};
+
+export const getAllAvailableCertificates: RequestHandler = async (_req, res) => {
+  try {
+    const certificates = await prisma.certificate.findMany({ orderBy: { name: "asc" } });
+
+    res.json(
+      certificates.map((certificate) => ({
+        id: certificate.id,
+        name: certificate.name,
+      }))
+    );
+  } catch (error) {
+    console.error("❌ Error fetching certificates:", error);
+    res.status(500).json({ error: "Failed to fetch certificates" });
+  }
 };

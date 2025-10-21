@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { db } from "../db";
+import { prisma } from "../db";
 
 export interface Domain {
   ID: number;
@@ -21,66 +21,79 @@ export interface SubDomainsResponse {
 }
 
 // Get all domains
-export const getDomains: RequestHandler = (req, res) => {
-  db.all("SELECT ID, Name FROM domains ORDER BY Name", [], (err, rows) => {
-    if (err) {
-      console.error("Error fetching domains:", err);
-      return res.status(500).json({ error: "Failed to fetch domains" });
-    }
+export const getDomains: RequestHandler = async (_req, res) => {
+  console.log('[Domains] GET /api/domains');
+  try {
+    const domains = await prisma.domain.findMany({
+      orderBy: { name: "asc" },
+    });
 
     const response: DomainsResponse = {
-      domains: rows as Domain[]
+      domains: domains.map((domain) => ({
+        ID: domain.id,
+        Name: domain.name,
+      })),
     };
 
     res.json(response);
-  });
+  } catch (error) {
+    console.error("Error fetching domains:", error);
+    res.status(500).json({ error: "Failed to fetch domains" });
+  }
 };
 
 // Get sub-domains by domain ID
-export const getSubDomainsByDomain: RequestHandler = (req, res) => {
-  const domainId = req.params.domainId;
+export const getSubDomainsByDomain: RequestHandler = async (req, res) => {
+  const domainId = Number(req.params.domainId);
 
   if (!domainId) {
     return res.status(400).json({ error: "Domain ID is required" });
   }
 
-  db.all(
-    "SELECT ID, domain_id, Name FROM sub_domains WHERE domain_id = ? ORDER BY Name",
-    [domainId],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching sub-domains:", err);
-        return res.status(500).json({ error: "Failed to fetch sub-domains" });
-      }
+  try {
+    const subDomains = await prisma.subDomain.findMany({
+      where: { domainId },
+      orderBy: { name: "asc" },
+    });
 
-      const response: SubDomainsResponse = {
-        subDomains: rows as SubDomain[]
-      };
+    const response: SubDomainsResponse = {
+      subDomains: subDomains.map((subDomain) => ({
+        ID: subDomain.id,
+        domain_id: subDomain.domainId,
+        Name: subDomain.name,
+      })),
+    };
 
-      res.json(response);
-    }
-  );
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching sub-domains:", error);
+    res.status(500).json({ error: "Failed to fetch sub-domains" });
+  }
 };
 
 // Get all sub-domains (for multi-select usage)
-export const getAllSubDomains: RequestHandler = (req, res) => {
-  db.all(
-    `SELECT sd.ID, sd.domain_id, sd.Name, d.Name as domain_name 
-     FROM sub_domains sd 
-     JOIN domains d ON sd.domain_id = d.ID 
-     ORDER BY d.Name, sd.Name`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching all sub-domains:", err);
-        return res.status(500).json({ error: "Failed to fetch sub-domains" });
-      }
+export const getAllSubDomains: RequestHandler = async (_req, res) => {
+  try {
+    const subDomains = await prisma.subDomain.findMany({
+      include: { domain: true },
+      orderBy: [
+        { domain: { name: "asc" } },
+        { name: "asc" },
+      ],
+    });
 
-      const response = {
-        subDomains: rows as (SubDomain & { domain_name: string })[]
-      };
+    const response = {
+      subDomains: subDomains.map((subDomain) => ({
+        ID: subDomain.id,
+        domain_id: subDomain.domainId,
+        Name: subDomain.name,
+        domain_name: subDomain.domain?.name ?? "",
+      })),
+    };
 
-      res.json(response);
-    }
-  );
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching all sub-domains:", error);
+    res.status(500).json({ error: "Failed to fetch sub-domains" });
+  }
 };

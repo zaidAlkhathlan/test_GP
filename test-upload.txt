@@ -1,5 +1,0 @@
-This is a test file for upload functionality.
-
-This file contains sample content that will be uploaded as part of a tender creation process.
-
-Testing file upload with CreateTender form.

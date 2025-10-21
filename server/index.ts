@@ -16,6 +16,9 @@ import { submitProposalWithFiles, getProposalsForTender, getProposalsBySupplier,
 import { getTendersWithStatus, updateExpiredTenders, finishTender, getTenderStatusStats, getTendersByStatus, awardTender, getAwardedSupplier, runUpdateExpiredTenders } from './routes/tender-status';
 import { getLicenses, getLicenseByCode } from './routes/licenses';
 import { getAllCertificates, getCertificateByCode } from './routes/certificates';
+import registrationsRouter from './routes/registrations';
+
+
 import { 
   getBuyerLicenses, 
   getBuyerCertificates, 
@@ -163,7 +166,14 @@ export function createServer() {
   // Get all available licenses and certificates for selection
   app.get('/api/available-licenses', getAllAvailableLicenses);
   app.get('/api/available-certificates', getAllAvailableCertificates);
-  
+
+
+
+  app.use('/api/registrations', registrationsRouter);
+
+
+
+
   // Initialize DB in background
   initDatabase()
     .then(() => {

@@ -1,82 +1,96 @@
-import { RequestHandler } from 'express';
-import { db } from '../db';
+import { RequestHandler } from "express";
+import { prisma } from "../db";
 
 // Get all regions
-export const getRegions: RequestHandler = (req, res) => {
-  db.all(
-    "SELECT * FROM Region ORDER BY name",
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching regions:", err);
-        res.status(500).json({ error: "Failed to fetch regions" });
-        return;
-      }
-      res.json(rows);
-    }
-  );
+export const getRegions: RequestHandler = async (_req, res) => {
+  console.log('[Locations] GET /api/regions');
+  try {
+    const regions = await prisma.region.findMany({
+      orderBy: { name: "asc" },
+    });
+
+    res.json({ regions });
+  } catch (error) {
+    console.error("Error fetching regions:", error);
+    res.status(500).json({ error: "Failed to fetch regions" });
+  }
 };
 
 // Get cities by region
-export const getCitiesByRegion: RequestHandler = (req, res) => {
-  const { regionId } = req.params;
-  
-  db.all(
-    "SELECT * FROM City WHERE region_id = ? ORDER BY name",
-    [regionId],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching cities:", err);
-        res.status(500).json({ error: "Failed to fetch cities" });
-        return;
-      }
-      res.json(rows);
-    }
-  );
+export const getCitiesByRegion: RequestHandler = async (req, res) => {
+  console.log('[Locations] GET /api/regions/%s/cities', req.params.regionId);
+  const regionId = Number(req.params.regionId);
+
+  if (!regionId) {
+    return res.status(400).json({ error: "Region ID is required" });
+  }
+
+  try {
+    const cities = await prisma.city.findMany({
+      where: { regionId },
+      orderBy: { name: "asc" },
+    });
+
+    res.json({ cities });
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    res.status(500).json({ error: "Failed to fetch cities" });
+  }
 };
 
 // Get all cities with region information
-export const getAllCities: RequestHandler = (req, res) => {
-  db.all(
-    `SELECT c.*, r.name as region_name 
-     FROM City c 
-     JOIN Region r ON c.region_id = r.id 
-     ORDER BY r.name, c.name`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching cities:", err);
-        res.status(500).json({ error: "Failed to fetch cities" });
-        return;
-      }
-      res.json({ cities: rows });
-    }
-  );
+export const getAllCities: RequestHandler = async (_req, res) => {
+  try {
+    const cities = await prisma.city.findMany({
+      include: { region: true },
+      orderBy: [
+        { region: { name: "asc" } },
+        { name: "asc" },
+      ],
+    });
+
+    res.json({
+      cities: cities.map((city) => ({
+        id: city.id,
+        name: city.name,
+        region_id: city.regionId,
+        region_name: city.region?.name ?? "",
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    res.status(500).json({ error: "Failed to fetch cities" });
+  }
 };
 
 // Get a specific city by ID
-export const getCityById: RequestHandler = (req, res) => {
-  const { id } = req.params;
-  
-  db.get(
-    `SELECT c.*, r.name as region_name 
-     FROM City c 
-     JOIN Region r ON c.region_id = r.id 
-     WHERE c.id = ?`,
-    [id],
-    (err, row) => {
-      if (err) {
-        console.error("Error fetching city:", err);
-        res.status(500).json({ error: "Failed to fetch city" });
-        return;
-      }
-      
-      if (!row) {
-        res.status(404).json({ error: "City not found" });
-        return;
-      }
-      
-      res.json({ city: row });
+export const getCityById: RequestHandler = async (req, res) => {
+  const cityId = Number(req.params.id);
+
+  if (!cityId) {
+    return res.status(400).json({ error: "City ID is required" });
+  }
+
+  try {
+    const city = await prisma.city.findUnique({
+      where: { id: cityId },
+      include: { region: true },
+    });
+
+    if (!city) {
+      return res.status(404).json({ error: "City not found" });
     }
-  );
+
+    res.json({
+      city: {
+        id: city.id,
+        name: city.name,
+        region_id: city.regionId,
+        region_name: city.region?.name ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching city:", error);
+    res.status(500).json({ error: "Failed to fetch city" });
+  }
 };
