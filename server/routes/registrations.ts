@@ -14,7 +14,7 @@ const normalizeIds = (value: unknown): number[] => {
   }
 
   if (Array.isArray(value)) {
-    return value
+    const normalized = value
       .map((item) => {
         if (typeof item === "number") {
           return item;
@@ -23,7 +23,10 @@ const normalizeIds = (value: unknown): number[] => {
           return Number(item);
         }
         if (typeof item === "object" && item !== null) {
-          const maybeId = (item as { id?: number | string }).id;
+          const maybeId = (item as { id?: number | string; value?: number | string })?.id ?? (
+            item as { id?: number | string; value?: number | string }
+          )?.value;
+
           if (typeof maybeId === "number") {
             return maybeId;
           }
@@ -34,6 +37,8 @@ const normalizeIds = (value: unknown): number[] => {
         return NaN;
       })
       .filter((id) => Number.isFinite(id) && id > 0) as number[];
+
+    return Array.from(new Set(normalized));
   }
 
   if (typeof value === "string" || typeof value === "number") {
