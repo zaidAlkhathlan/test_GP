@@ -170,34 +170,34 @@ export const createSupplier: RequestHandler = async (req, res) => {
         });
 
         if (subDomains.length > 0) {
+          // Note: skipDuplicates is not supported on SQLite
           await tx.supplierSubDomain.createMany({
             data: subDomains.map((subDomain) => ({
               supplierId: createdSupplier.id,
               subDomainId: subDomain.id,
               name: subDomain.name,
             })),
-            skipDuplicates: true,
           });
         }
       }
 
       if (licenseIds.length > 0) {
+        // Note: skipDuplicates is not supported on SQLite
         await tx.supplierLicense.createMany({
           data: licenseIds.map((licenseId) => ({
             supplierId: createdSupplier.id,
             licenseId,
           })),
-          skipDuplicates: true,
         });
       }
 
       if (certificateIds.length > 0) {
+        // Note: skipDuplicates is not supported on SQLite
         await tx.supplierCertificate.createMany({
           data: certificateIds.map((certificateId) => ({
             supplierId: createdSupplier.id,
             certificateId,
           })),
-          skipDuplicates: true,
         });
       }
 

@@ -36,7 +36,11 @@ export default function RegionSelector({
         }
         
         const data = await response.json();
-        setRegions(data);
+        const regionsArray = Array.isArray(data) ? data : data?.regions;
+        if (!Array.isArray(regionsArray)) {
+          throw new Error('Invalid regions response shape');
+        }
+        setRegions(regionsArray);
       } catch (error) {
         console.error('Error fetching regions:', error);
         setError('فشل في تحميل المناطق');

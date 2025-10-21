@@ -51,6 +51,7 @@ const normalizeIds = (value: unknown): number[] => {
 
 /* ---------------------- Verify Commercial Number ---------------------- */
 router.get("/verify/:commercialNumber", async (req, res) => {
+  console.log('[Registration] GET /api/registrations/verify/%s', req.params.commercialNumber);
   const { commercialNumber } = req.params;
   if (!commercialNumber) {
     return res.status(400).json({ message: "Commercial number is required." });
@@ -80,6 +81,8 @@ router.get("/verify/:commercialNumber", async (req, res) => {
 
 /* ---------------------- Send OTP ---------------------- */
 router.post("/send-otp", async (req, res) => {
+  const masked = (req.body?.phone || '').toString().replace(/\d(?=\d{4})/g, '*');
+  console.log('[Registration] POST /api/registrations/send-otp phone=%s', masked);
   const { phone } = req.body;
   if (!phone) {
     return res.status(400).json({ message: "Phone number is required." });
@@ -110,6 +113,8 @@ router.post("/send-otp", async (req, res) => {
 
 /* ---------------------- Verify OTP ---------------------- */
 router.post("/verify-otp", async (req, res) => {
+  const masked = (req.body?.phoneNumber || '').toString().replace(/\d(?=\d{4})/g, '*');
+  console.log('[Registration] POST /api/registrations/verify-otp phone=%s otp_len=%s', masked, (req.body?.otpCode || '').toString().length);
   const { phoneNumber, otpCode } = req.body;
   if (!phoneNumber || !otpCode) {
     return res
@@ -142,6 +147,22 @@ router.post("/verify-otp", async (req, res) => {
 
 /* ---------------------- Registration Save ---------------------- */
 router.post("/register", async (req: Request, res: Response) => {
+  const maskedEmail = (req.body?.coordinator?.email || '').toString().replace(/(^.).*(@.*$)/, '$1***$2');
+  const maskedPhone = (req.body?.coordinator?.mobile || '').toString().replace(/\d(?=\d{4})/g, '*');
+  console.log('[Registration] POST /api/registrations/register', {
+    institutionType: req.body?.institutionType,
+    domainId: Number(req.body?.selectedDomain) || null,
+    cityId: Number(req.body?.cityId) || null,
+    subDomainCount: Array.isArray(req.body?.selectedSubDomains) ? req.body.selectedSubDomains.length : 0,
+    licenseCount: Array.isArray(req.body?.licenses) ? req.body.licenses.length : 0,
+    certificateCount: Array.isArray(req.body?.certificates) ? req.body.certificates.length : 0,
+    coordinator: {
+      name: req.body?.coordinator?.name || '',
+      email: maskedEmail,
+      mobile: maskedPhone,
+      password: req.body?.coordinator?.password ? '***' : '(none)'
+    }
+  });
   const {
     institutionType,
     commercialRegNumber,
@@ -211,34 +232,34 @@ router.post("/register", async (req: Request, res: Response) => {
           });
 
           if (subDomains.length > 0) {
+            // Note: skipDuplicates is not supported on SQLite; relying on transaction isolation and unique constraints
             await tx.buyerSubDomain.createMany({
               data: subDomains.map((subDomain) => ({
                 buyerId: createdBuyer.id,
                 subDomainId: subDomain.id,
                 name: subDomain.name,
               })),
-              skipDuplicates: true,
             });
           }
         }
 
         if (licenseIds.length > 0) {
+          // Note: skipDuplicates is not supported on SQLite
           await tx.buyerLicense.createMany({
             data: licenseIds.map((licenseId) => ({
               buyerId: createdBuyer.id,
               licenseId,
             })),
-            skipDuplicates: true,
           });
         }
 
         if (certificateIds.length > 0) {
+          // Note: skipDuplicates is not supported on SQLite
           await tx.buyerCertificate.createMany({
             data: certificateIds.map((certificateId) => ({
               buyerId: createdBuyer.id,
               certificateId,
             })),
-            skipDuplicates: true,
           });
         }
 
@@ -285,34 +306,34 @@ router.post("/register", async (req: Request, res: Response) => {
           });
 
           if (subDomains.length > 0) {
+            // Note: skipDuplicates is not supported on SQLite; relying on transaction isolation and unique constraints
             await tx.supplierSubDomain.createMany({
               data: subDomains.map((subDomain) => ({
                 supplierId: createdSupplier.id,
                 subDomainId: subDomain.id,
                 name: subDomain.name,
               })),
-              skipDuplicates: true,
             });
           }
         }
 
         if (licenseIds.length > 0) {
+          // Note: skipDuplicates is not supported on SQLite
           await tx.supplierLicense.createMany({
             data: licenseIds.map((licenseId) => ({
               supplierId: createdSupplier.id,
               licenseId,
             })),
-            skipDuplicates: true,
           });
         }
 
         if (certificateIds.length > 0) {
+          // Note: skipDuplicates is not supported on SQLite
           await tx.supplierCertificate.createMany({
             data: certificateIds.map((certificateId) => ({
               supplierId: createdSupplier.id,
               certificateId,
             })),
-            skipDuplicates: true,
           });
         }
 

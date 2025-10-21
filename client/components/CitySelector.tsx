@@ -44,7 +44,11 @@ export default function CitySelector({
         }
         
         const data = await response.json();
-        setCities(data);
+        const citiesArray = Array.isArray(data) ? data : data?.cities;
+        if (!Array.isArray(citiesArray)) {
+          throw new Error('Invalid cities response shape');
+        }
+        setCities(citiesArray);
       } catch (error) {
         console.error('Error fetching cities:', error);
         setError('فشل في تحميل المدن');

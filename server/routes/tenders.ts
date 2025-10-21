@@ -291,12 +291,12 @@ export const createTender: RequestHandler = async (req, res) => {
       });
 
       if (parsedSubDomainIds.length > 0) {
+        // Note: skipDuplicates is not supported on SQLite
         await tx.tenderSubDomain.createMany({
           data: parsedSubDomainIds.map((subDomainId) => ({
             tenderId: createdTender.id,
             subDomainId,
           })),
-          skipDuplicates: true,
         });
       }
 
@@ -312,12 +312,12 @@ export const createTender: RequestHandler = async (req, res) => {
           },
         });
 
+        // Note: skipDuplicates is not supported on SQLite
         await tx.tenderLicense.createMany({
           data: licenses.map((license) => ({
             tenderId: createdTender.id,
             licenseId: license.id,
           })),
-          skipDuplicates: true,
         });
       }
 
@@ -328,12 +328,12 @@ export const createTender: RequestHandler = async (req, res) => {
           },
         });
 
+        // Note: skipDuplicates is not supported on SQLite
         await tx.tenderCertificate.createMany({
           data: certificates.map((certificate) => ({
             tenderId: createdTender.id,
             certificateId: certificate.id,
           })),
-          skipDuplicates: true,
         });
       }
 

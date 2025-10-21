@@ -22,6 +22,7 @@ export interface SubDomainsResponse {
 
 // Get all domains
 export const getDomains: RequestHandler = async (_req, res) => {
+  console.log('[Domains] GET /api/domains');
   try {
     const domains = await prisma.domain.findMany({
       orderBy: { name: "asc" },

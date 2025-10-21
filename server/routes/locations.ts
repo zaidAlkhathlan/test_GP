@@ -3,6 +3,7 @@ import { prisma } from "../db";
 
 // Get all regions
 export const getRegions: RequestHandler = async (_req, res) => {
+  console.log('[Locations] GET /api/regions');
   try {
     const regions = await prisma.region.findMany({
       orderBy: { name: "asc" },
@@ -17,6 +18,7 @@ export const getRegions: RequestHandler = async (_req, res) => {
 
 // Get cities by region
 export const getCitiesByRegion: RequestHandler = async (req, res) => {
+  console.log('[Locations] GET /api/regions/%s/cities', req.params.regionId);
   const regionId = Number(req.params.regionId);
 
   if (!regionId) {
