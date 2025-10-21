@@ -1,390 +1,297 @@
-import { RequestHandler, Request } from "express";
-import { db } from "../db";
-import multer from 'multer';
-import fs from 'fs';
+import { RequestHandler } from "express";
+import multer from "multer";
+import { prisma } from "../db";
 
-// Configure multer for file uploads
-const upload = multer({ 
-  dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Allow common document and image formats
     const allowedTypes = [
-      'application/pdf',
-      'application/msword', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
-      'image/jpg'
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
     ];
-    
+
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only PDF, DOC, DOCX, JPG, PNG files are allowed.'));
+      cb(new Error("Invalid file type. Only PDF, DOC, DOCX, JPG, PNG files are allowed."));
     }
-  }
+  },
 });
 
-// Extend Request interface to include files
 interface MulterRequest extends Request {
   files?: Express.Multer.File[];
 }
 
-// Submit proposal with files
-export const submitProposalWithFiles = [
-  upload.any(), // Accept any files
-  ((req: MulterRequest, res) => {
+export const submitProposalWithFiles: RequestHandler[] = [
+  upload.any(),
+  async (req: MulterRequest, res) => {
     try {
-      const { tender_id, supplier_id, proposal_price, company_name, project_description, extra_description } = req.body;
-      const files = req.files as Express.Multer.File[] || [];
+      const {
+        tender_id,
+        supplier_id,
+        proposal_price,
+        company_name,
+        project_description,
+        extra_description,
+      } = req.body;
 
-      console.log("Submitting proposal:", { tender_id, supplier_id, proposal_price, filesCount: files.length });
+      const files = (req.files as Express.Multer.File[]) ?? [];
 
-      // Validate required fields
       if (!tender_id || !supplier_id || !proposal_price) {
         return res.status(400).json({
           success: false,
-          message: "Missing required fields: tender_id, supplier_id, proposal_price"
+          message: "Missing required fields: tender_id, supplier_id, proposal_price",
         });
       }
 
-      // Generate reference number (you can implement your own logic here)
-      const reference_number = Math.floor(100000 + Math.random() * 900000);
-
-      // Prepare file data as BLOBs
-      const fileData: { [key: string]: Buffer | null } = {
+      const fileData: Record<string, Buffer | null> = {
         financial_file: null,
         technical_file: null,
         company_file: null,
-        extra_file: null
+        extra_file: null,
       };
 
-      // Process uploaded files
       for (const file of files) {
-        const fileBuffer = fs.readFileSync(file.path);
-        
-        // Map file fieldname to database column
-        if (file.fieldname === 'financial_file') {
-          fileData.financial_file = fileBuffer;
-        } else if (file.fieldname === 'technical_file') {
-          fileData.technical_file = fileBuffer;
-        } else if (file.fieldname === 'company_file') {
-          fileData.company_file = fileBuffer;
-        } else if (file.fieldname === 'extra_file') {
-          fileData.extra_file = fileBuffer;
+        if (file.fieldname in fileData) {
+          fileData[file.fieldname] = file.buffer;
         }
-
-        // Clean up temporary file
-        fs.unlinkSync(file.path);
       }
 
-      // Insert proposal into Proposal table
-      const insertProposalSql = `
-        INSERT INTO Proposal (
-          reference_number, proposal_price, company_name, project_description,
-          financial_file, technical_file, company_file, extra_file, extra_description,
-          tender_id, supplier_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const proposalParams = [
-        reference_number,
-        parseFloat(proposal_price),
-        company_name || null,
-        project_description || null,
-        fileData.financial_file,
-        fileData.technical_file,
-        fileData.company_file,
-        fileData.extra_file,
-        extra_description || null,
-        parseInt(tender_id),
-        parseInt(supplier_id)
-      ];
-
-      db.run(insertProposalSql, proposalParams, function(err) {
-        if (err) {
-          console.error("Error inserting proposal:", err);
-          return res.status(500).json({
-            success: false,
-            message: "Error submitting proposal: " + err.message
-          });
-        }
-
-        console.log(`✅ Proposal submitted with ID: ${this.lastID}`);
-        res.json({
-          success: true,
-          message: "Proposal submitted successfully",
-          proposalId: this.lastID,
-          referenceNumber: reference_number
-        });
+      const proposal = await prisma.proposal.create({
+        data: {
+          referenceNumber: Math.floor(100000 + Math.random() * 900000),
+          proposalPrice: Number(proposal_price),
+          companyName: company_name ?? null,
+          projectDescription: project_description ?? null,
+          financialFile: fileData.financial_file,
+          technicalFile: fileData.technical_file,
+          companyFile: fileData.company_file,
+          extraFile: fileData.extra_file,
+          extraDescription: extra_description ?? null,
+          tenderId: Number(tender_id),
+          supplierId: Number(supplier_id),
+        },
       });
 
-    } catch (error) {
+      res.json({
+        success: true,
+        message: "Proposal submitted successfully",
+        proposalId: proposal.id,
+        referenceNumber: proposal.referenceNumber,
+      });
+    } catch (error: any) {
       console.error("Error in submitProposalWithFiles:", error);
       res.status(500).json({
         success: false,
-        message: "Internal server error"
+        message: "Internal server error",
       });
     }
-  }) as RequestHandler
+  },
 ];
 
-// Get proposals for a specific tender
-export const getProposalsForTender: RequestHandler = (req, res) => {
+export const getProposalsForTender: RequestHandler = async (req, res) => {
+  const tenderId = Number(req.params.tenderId);
+
   try {
-    const { tenderId } = req.params;
-
-    const query = `
-      SELECT 
-        p.id,
-        p.reference_number,
-        p.proposal_price,
-        p.created_at,
-        p.company_name,
-        p.project_description,
-        p.extra_description,
-        p.tender_id,
-        p.supplier_id,
-        s.company_name as supplier_company_name,
-        s.Account_email as supplier_email,
-        s.Account_name as supplier_account_name,
-        s.Commercial_registration_number as supplier_commercial_record,
-        s.Commercial_Phone_number as supplier_phone,
-        s.Account_phone as supplier_account_phone,
-        s.city_id as supplier_city_id,
-        c.name as supplier_city,
-        d.Name as supplier_domain_name
-      FROM Proposal p
-      JOIN Supplier s ON p.supplier_id = s.ID
-      LEFT JOIN domains d ON s.domains_id = d.ID
-      LEFT JOIN City c ON s.city_id = c.id
-      WHERE p.tender_id = ?
-      ORDER BY p.created_at DESC
-    `;
-
-    db.all(query, [tenderId], (err, proposals) => {
-      if (err) {
-        console.error("Error fetching proposals:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error fetching proposals" 
-        });
-      }
-
-      if (!proposals || proposals.length === 0) {
-        return res.json({
-          success: true,
-          data: []
-        });
-      }
-
-      // For each proposal, fetch supplier's licenses and certificates
-      let processedCount = 0;
-      const enrichedProposals = proposals.map(proposal => ({ ...proposal, licenses: [], certificates: [] }));
-
-      proposals.forEach((proposal, index) => {
-        // Get supplier licenses
-        db.all(`
-          SELECT l.Name 
-          FROM Supplier_Licenses sl 
-          JOIN Licenses l ON sl.license_id = l.ID 
-          WHERE sl.supplier_id = ?
-        `, [proposal.supplier_id], (err, licenses) => {
-          if (!err && licenses) {
-            enrichedProposals[index].licenses = licenses.map(l => l.Name);
-          }
-
-          // Get supplier certificates
-          db.all(`
-            SELECT c.Name 
-            FROM Supplier_Certificates sc 
-            JOIN certificates c ON sc.certificate_id = c.ID 
-            WHERE sc.supplier_id = ?
-          `, [proposal.supplier_id], (err, certificates) => {
-            if (!err && certificates) {
-              enrichedProposals[index].certificates = certificates.map(c => c.Name);
-            }
-
-            processedCount++;
-            if (processedCount === proposals.length) {
-              res.json({
-                success: true,
-                data: enrichedProposals
-              });
-            }
-          });
-        });
-      });
-
+    const proposals = await prisma.proposal.findMany({
+      where: { tenderId },
+      include: {
+        supplier: {
+          include: {
+            supplierLicenses: { include: { license: true } },
+            supplierCertificates: { include: { certificate: true } },
+            city: true,
+            domain: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
+    const mapped = proposals.map((proposal) => ({
+      id: proposal.id,
+      reference_number: proposal.referenceNumber,
+      proposal_price: proposal.proposalPrice,
+      created_at: proposal.createdAt?.toISOString?.() ?? proposal.createdAt,
+      company_name: proposal.companyName,
+      project_description: proposal.projectDescription,
+      extra_description: proposal.extraDescription,
+      tender_id: proposal.tenderId,
+      supplier_id: proposal.supplierId,
+      supplier_company_name: proposal.supplier?.companyName ?? null,
+      supplier_email: proposal.supplier?.accountEmail ?? null,
+      supplier_account_name: proposal.supplier?.accountName ?? null,
+      supplier_commercial_record: proposal.supplier?.commercialRegistrationNumber ?? null,
+      supplier_phone: proposal.supplier?.commercialPhoneNumber ?? null,
+      supplier_account_phone: proposal.supplier?.accountPhone ?? null,
+      supplier_city_id: proposal.supplier?.cityId ?? null,
+      supplier_city: proposal.supplier?.city?.name ?? null,
+      supplier_domain_name: proposal.supplier?.domain?.name ?? null,
+      licenses:
+        proposal.supplier?.supplierLicenses?.map((entry) =>
+          entry.license?.name ?? entry.license?.nameEn ?? entry.license?.nameAr ?? ""
+        ) ?? [],
+      certificates:
+        proposal.supplier?.supplierCertificates?.map((entry) => entry.certificate?.name ?? "") ?? [],
+    }));
+
+    res.json({ success: true, data: mapped });
   } catch (error) {
     console.error("Error in getProposalsForTender:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Error fetching proposals",
     });
   }
 };
 
-// Get proposals by supplier (for supplier dashboard)
-export const getProposalsBySupplier: RequestHandler = (req, res) => {
+export const getProposalsBySupplier: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.supplierId);
+
   try {
-    const { supplierId } = req.params;
-
-    const query = `
-      SELECT 
-        p.id,
-        p.reference_number,
-        p.proposal_price,
-        p.created_at,
-        p.company_name,
-        p.project_description,
-        p.tender_id,
-        t.title as tender_title,
-        t.reference_number as tender_reference_number
-      FROM Proposal p
-      JOIN tender t ON p.tender_id = t.id
-      WHERE p.supplier_id = ?
-      ORDER BY p.created_at DESC
-    `;
-
-    db.all(query, [supplierId], (err, proposals) => {
-      if (err) {
-        console.error("Error fetching supplier proposals:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error fetching proposals" 
-        });
-      }
-
-      res.json({
-        success: true,
-        data: proposals || []
-      });
+    const proposals = await prisma.proposal.findMany({
+      where: { supplierId },
+      include: {
+        tender: true,
+      },
+      orderBy: { createdAt: "desc" },
     });
 
+    res.json({
+      success: true,
+      data: proposals.map((proposal) => ({
+        id: proposal.id,
+        reference_number: proposal.referenceNumber,
+        proposal_price: proposal.proposalPrice,
+        created_at: proposal.createdAt?.toISOString?.() ?? proposal.createdAt,
+        company_name: proposal.companyName,
+        project_description: proposal.projectDescription,
+        tender_id: proposal.tenderId,
+        tender_title: proposal.tender?.title ?? null,
+        tender_reference_number: proposal.tender?.referenceNumber ?? null,
+      })),
+    });
   } catch (error) {
     console.error("Error in getProposalsBySupplier:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Error fetching proposals",
     });
   }
 };
 
-// Get proposal file (download)
-export const downloadProposalFile: RequestHandler = (req, res) => {
-  try {
-    const { proposalId, fileType } = req.params;
+export const downloadProposalFile: RequestHandler = async (req, res) => {
+  const proposalId = Number(req.params.proposalId);
+  const fileType = req.params.fileType;
 
-    // Validate file type
-    const validFileTypes = ['financial_file', 'technical_file', 'company_file', 'extra_file'];
-    if (!validFileTypes.includes(fileType)) {
-      return res.status(400).json({
+  const validFileTypes = ["financial_file", "technical_file", "company_file", "extra_file"] as const;
+  if (!validFileTypes.includes(fileType as any)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid file type",
+    });
+  }
+
+  try {
+    const proposal = await prisma.proposal.findUnique({
+      where: { id: proposalId },
+      select: {
+        financialFile: true,
+        technicalFile: true,
+        companyFile: true,
+        extraFile: true,
+      },
+    });
+
+    if (!proposal || !proposal[convertFileKey(fileType)]) {
+      return res.status(404).json({
         success: false,
-        message: "Invalid file type"
+        message: "File not found",
       });
     }
 
-    const query = `SELECT ${fileType} FROM Proposal WHERE id = ?`;
-
-    db.get(query, [proposalId], (err, result: any) => {
-      if (err) {
-        console.error("Error fetching proposal file:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error fetching file"
-        });
-      }
-
-      if (!result || !result[fileType]) {
-        return res.status(404).json({
-          success: false,
-          message: "File not found"
-        });
-      }
-
-      // Set appropriate headers
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileType}_${proposalId}"`);
-      
-      // Send the file buffer
-      res.send(result[fileType]);
-    });
-
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileType}_${proposalId}"`
+    );
+    res.send(proposal[convertFileKey(fileType)]);
   } catch (error) {
     console.error("Error in downloadProposalFile:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Error fetching file",
     });
   }
 };
 
-// Get proposal details including file information
-export const getProposalDetails: RequestHandler = (req, res) => {
+export const getProposalDetails: RequestHandler = async (req, res) => {
+  const proposalId = Number(req.params.proposalId);
+
   try {
-    const { proposalId } = req.params;
-
-    const query = `
-      SELECT 
-        p.*,
-        s.company_name as supplier_company_name,
-        s.Account_email as supplier_email,
-        t.title as tender_title,
-        t.reference_number as tender_reference_number
-      FROM Proposal p
-      JOIN Supplier s ON p.supplier_id = s.ID
-      JOIN tender t ON p.tender_id = t.id
-      WHERE p.id = ?
-    `;
-
-    db.get(query, [proposalId], (err, proposal: any) => {
-      if (err) {
-        console.error("Error fetching proposal details:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error fetching proposal details"
-        });
-      }
-
-      if (!proposal) {
-        return res.status(404).json({
-          success: false,
-          message: "Proposal not found"
-        });
-      }
-
-      // Add file information (check which files exist)
-      const files = {
-        financial_file: proposal.financial_file ? true : false,
-        technical_file: proposal.technical_file ? true : false,
-        company_file: proposal.company_file ? true : false,
-        extra_file: proposal.extra_file ? true : false
-      };
-
-      // Remove BLOB data from response (we don't want to send binary data in JSON)
-      delete proposal.financial_file;
-      delete proposal.technical_file;
-      delete proposal.company_file;
-      delete proposal.extra_file;
-
-      res.json({
-        success: true,
-        data: {
-          ...proposal,
-          files
-        }
-      });
+    const proposal = await prisma.proposal.findUnique({
+      where: { id: proposalId },
+      include: {
+        supplier: true,
+        tender: true,
+      },
     });
 
+    if (!proposal) {
+      return res.status(404).json({
+        success: false,
+        message: "Proposal not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: proposal.id,
+        reference_number: proposal.referenceNumber,
+        proposal_price: proposal.proposalPrice,
+        company_name: proposal.companyName,
+        project_description: proposal.projectDescription,
+        extra_description: proposal.extraDescription,
+        tender_id: proposal.tenderId,
+        supplier_id: proposal.supplierId,
+        supplier_company_name: proposal.supplier?.companyName ?? null,
+        supplier_email: proposal.supplier?.accountEmail ?? null,
+        tender_title: proposal.tender?.title ?? null,
+        tender_reference_number: proposal.tender?.referenceNumber ?? null,
+        files: {
+          financial_file: !!proposal.financialFile,
+          technical_file: !!proposal.technicalFile,
+          company_file: !!proposal.companyFile,
+          extra_file: !!proposal.extraFile,
+        },
+      },
+    });
   } catch (error) {
     console.error("Error in getProposalDetails:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Error fetching proposal details",
     });
   }
 };
+
+function convertFileKey(fileType: string) {
+  switch (fileType) {
+    case "financial_file":
+      return "financialFile" as const;
+    case "technical_file":
+      return "technicalFile" as const;
+    case "company_file":
+      return "companyFile" as const;
+    case "extra_file":
+      return "extraFile" as const;
+    default:
+      return "financialFile" as const;
+  }
+}
