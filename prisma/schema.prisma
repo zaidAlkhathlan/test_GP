@@ -1,0 +1,418 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Registration {
+  id                             Int    @id @default(autoincrement())
+  name                           String? @map("name")
+  commercialRegistrationNumber   String  @unique @map("commercial_registration_number")
+  phoneNumber                    String  @map("phone_number")
+
+  @@map("Registrations")
+}
+
+model Domain {
+  id         Int         @id @default(autoincrement()) @map("ID")
+  name       String      @map("Name")
+  subDomains SubDomain[]
+  buyers     Buyer[]
+  suppliers  Supplier[]
+  tenders    Tender[]
+
+  @@map("domains")
+}
+
+model SubDomain {
+  id        Int        @id @default(autoincrement()) @map("ID")
+  domainId  Int        @map("domain_id")
+  name      String     @map("Name")
+
+  domain             Domain             @relation(fields: [domainId], references: [id], onDelete: Restrict)
+  buyerSubDomains    BuyerSubDomain[]
+  supplierSubDomains SupplierSubDomain[]
+  tenderSubDomains   TenderSubDomain[]
+
+  @@map("sub_domains")
+  @@index([domainId], name: "idx_sub_domains_domain_id")
+}
+
+model License {
+  id             Int              @id @default(autoincrement()) @map("ID")
+  code           String?          @unique @map("code")
+  name           String?          @map("Name")
+  nameAr         String?          @map("name_ar")
+  nameEn         String?          @map("name_en")
+  category       String?          @map("category")
+  descriptionAr  String?          @map("description_ar")
+  descriptionEn  String?          @map("description_en")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  buyerLicenses   BuyerLicense[]
+  supplierLicenses SupplierLicense[]
+  tenderLicenses  TenderLicense[]
+
+  @@map("Licenses")
+}
+
+model Certificate {
+  id        Int                @id @default(autoincrement()) @map("ID")
+  name      String             @map("Name")
+
+  buyerCertificates   BuyerCertificate[]
+  supplierCertificates SupplierCertificate[]
+  tenderCertificates   TenderCertificate[]
+
+  @@map("Certificates")
+}
+
+model Status {
+  id      Int      @id @default(autoincrement()) @map("id")
+  name    String   @map("name")
+  tenders Tender[]
+
+  @@map("status")
+}
+
+model Region {
+  id     Int    @id @default(autoincrement()) @map("id")
+  name   String @map("name")
+  cities City[]
+
+  @@map("Region")
+}
+
+model City {
+  id       Int      @id @default(autoincrement()) @map("id")
+  name     String   @map("name")
+  regionId Int      @map("region_id")
+
+  region   Region   @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  buyers   Buyer[]
+  suppliers Supplier[]
+  tenders  Tender[]
+
+  @@map("City")
+  @@unique([regionId, name])
+}
+
+model Buyer {
+  id                           Int        @id @default(autoincrement()) @map("ID")
+  commercialRegistrationNumber String     @unique @map("Commercial_registration_number")
+  commercialPhoneNumber        String     @map("Commercial_Phone_number")
+  domainId                     Int        @map("domains_id")
+  companyName                  String     @map("company_name")
+  cityId                       Int?       @map("city_id")
+  logo                         String?    @map("Logo")
+  accountName                  String     @map("Account_name")
+  accountEmail                 String     @unique @map("Account_email")
+  accountPhone                 String?    @map("Account_phone")
+  accountPassword              String     @map("Account_password")
+  industry                     String?    @map("industry")
+  description                  String?    @map("description")
+  createdAt                    DateTime   @default(now()) @map("created_at")
+  updatedAt                    DateTime   @updatedAt @map("updated_at")
+
+  domain          Domain           @relation(fields: [domainId], references: [id])
+  city            City?            @relation(fields: [cityId], references: [id])
+  licenses        BuyerLicense[]
+  certificates    BuyerCertificate[]
+  tenders         Tender[]
+  inquiryAnswers  InquiryAnswer[]
+  buyerSubDomains BuyerSubDomain[]
+
+  @@map("Buyer")
+}
+
+model Supplier {
+  id                           Int                 @id @default(autoincrement()) @map("ID")
+  commercialRegistrationNumber String              @unique @map("Commercial_registration_number")
+  commercialPhoneNumber        String              @map("Commercial_Phone_number")
+  domainId                     Int                 @map("domains_id")
+  createdAt                    DateTime            @default(now()) @map("created_at")
+  cityId                       Int                 @map("city_id")
+  updatedAt                    DateTime            @updatedAt @map("updated_at")
+  logo                         String?             @map("Logo")
+  accountName                  String              @map("Account_name")
+  accountEmail                 String              @unique @map("Account_email")
+  accountPhone                 String              @map("Account_phone")
+  companyName                  String              @map("company_name")
+  accountPassword              String              @map("Account_password")
+  description                  String?             @map("description")
+  industry                     String?             @map("industry")
+  licensesJson                 String?             @map("licenses")
+  certificatesJson             String?             @map("certificates")
+
+  domain             Domain?             @relation(fields: [domainId], references: [id])
+  city               City               @relation(fields: [cityId], references: [id])
+  supplierLicenses   SupplierLicense[]
+  supplierCertificates SupplierCertificate[]
+  supplierSubDomains  SupplierSubDomain[]
+  tendersWon          Tender[]           @relation("TenderWinner")
+  proposals           Proposal[]
+  offers              Offer[]
+  tenderOffers        TenderOffer[]
+  inquiries           Inquiry[]
+
+  @@map("Supplier")
+}
+
+model BuyerLicense {
+  buyerId   Int    @map("buyer_id")
+  licenseId Int    @map("license_id")
+
+  buyer   Buyer   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@id([buyerId, licenseId])
+  @@map("Buyer_Licenses")
+}
+
+model BuyerCertificate {
+  buyerId       Int        @map("buyer_id")
+  certificateId Int        @map("certificate_id")
+
+  buyer       Buyer       @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@id([buyerId, certificateId])
+  @@map("Buyer_Certificates")
+}
+
+model BuyerSubDomain {
+  buyerId      Int        @map("buyer_id")
+  subDomainId  Int        @map("sub_domains_id")
+  name         String?    @map("Name")
+
+  buyer     Buyer     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  subDomain SubDomain @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+
+  @@id([buyerId, subDomainId])
+  @@map("buyer_sub_domains")
+}
+
+model SupplierLicense {
+  supplierId Int     @map("supplier_id")
+  licenseId  Int     @map("license_id")
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  license  License  @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, licenseId])
+  @@map("Supplier_Licenses")
+}
+
+model SupplierCertificate {
+  supplierId    Int         @map("supplier_id")
+  certificateId Int         @map("certificate_id")
+
+  supplier   Supplier   @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, certificateId])
+  @@map("Supplier_Certificates")
+}
+
+model SupplierSubDomain {
+  supplierId  Int        @map("supplier_id")
+  subDomainId Int        @map("sub_domains_id")
+  name        String?    @map("Name")
+
+  supplier  Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  subDomain SubDomain @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, subDomainId])
+  @@map("supplier_sub_domains")
+}
+
+model Tender {
+  id                 Int                 @id @default(autoincrement()) @map("id")
+  buyerId            Int                 @map("buyer_id")
+  referenceNumber    Int?                @map("reference_number")
+  title              String              @map("title")
+  domainId           Int                 @map("domain_id")
+  projectDescription String?             @map("project_description")
+  cityId             Int?                @map("city_id")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  submitDeadline     DateTime?           @map("submit_deadline")
+  quiresDeadline     DateTime?           @map("quires_deadline")
+  contractTime       String?             @map("contract_time")
+  previousWork       String?             @map("previous_work")
+  evaluationCriteria String?             @map("evaluation_criteria")
+  usedTechnologies   String?             @map("used_technologies")
+  tenderCoordinator  String?             @map("tender_coordinator")
+  coordinatorEmail   String?             @map("coordinator_email")
+  coordinatorPhone   String?             @map("coordinator_phone")
+  file1              Bytes?              @map("file1")
+  file2              Bytes?              @map("file2")
+  file1Name          String?             @map("file1_name")
+  file2Name          String?             @map("file2_name")
+  expectedBudget     Float?              @map("expected_budget")
+  statusId           Int?                @default(1) @map("status_id")
+  finishedAt         DateTime?           @map("finished_at")
+  winnerId           Int?                @map("supplier_win_id")
+  cityText           String?             @map("city")
+
+  buyer           Buyer             @relation(fields: [buyerId], references: [id])
+  domain          Domain            @relation(fields: [domainId], references: [id])
+  city            City?             @relation(fields: [cityId], references: [id])
+  status          Status?           @relation(fields: [statusId], references: [id])
+  winner          Supplier?         @relation("TenderWinner", fields: [winnerId], references: [id])
+  tenderSubDomains TenderSubDomain[]
+  tenderLicenses   TenderLicense[]
+  tenderCertificates TenderCertificate[]
+  requiredFiles    TenderRequiredFile[]
+  proposals        Proposal[]
+  inquiries        Inquiry[]
+  offers           Offer[]
+  tenderOffers     TenderOffer[]
+
+  @@map("tender")
+}
+
+model TenderSubDomain {
+  tenderId    Int        @map("tender_id")
+  subDomainId Int        @map("sub_domain_id")
+
+  tender    Tender    @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  subDomain SubDomain @relation(fields: [subDomainId], references: [id], onDelete: Cascade)
+
+  @@id([tenderId, subDomainId])
+  @@map("tender_sub_domains")
+}
+
+model TenderLicense {
+  tenderId Int     @map("tender_id")
+  licenseId Int    @map("license_id")
+
+  tender  Tender  @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+
+  @@id([tenderId, licenseId])
+  @@map("tender_licenses")
+}
+
+model TenderCertificate {
+  tenderId     Int         @map("tender_id")
+  certificateId Int        @map("certificate_id")
+
+  tender      Tender      @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@id([tenderId, certificateId])
+  @@map("tender_certificates")
+}
+
+model TenderRequiredFile {
+  id             Int      @id @default(autoincrement()) @map("id")
+  tenderId       Int      @map("tender_id")
+  fileType       String   @map("file_type")
+  fileName       String   @map("file_name")
+  description    String?  @map("description")
+  isRequired     Boolean  @default(true) @map("is_required")
+  maxSizeMb      Int?     @map("max_size_mb")
+  allowedFormats String?  @map("allowed_formats")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tender Tender @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  @@map("tender_required_files")
+}
+
+model TenderOffer {
+  id                 Int       @id @default(autoincrement()) @map("id")
+  tenderId           Int       @map("tender_id")
+  supplierId         Int       @map("supplier_id")
+  financialOfferFile String?   @map("financial_offer_file")
+  technicalOfferFile String?   @map("technical_offer_file")
+  comment            String?   @map("comment")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tender   Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("tender_offers")
+}
+
+model Proposal {
+  id                Int      @id @default(autoincrement()) @map("id")
+  referenceNumber   Int      @map("reference_number")
+  proposalPrice     Float    @map("proposal_price")
+  companyName       String?  @map("company_name")
+  projectDescription String? @map("project_description")
+  financialFile     Bytes?   @map("financial_file")
+  technicalFile     Bytes?   @map("technical_file")
+  companyFile       Bytes?   @map("company_file")
+  extraFile         Bytes?   @map("extra_file")
+  extraDescription  String?  @map("extra_description")
+  tenderId          Int      @map("tender_id")
+  supplierId        Int      @map("supplier_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tender   Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("Proposal")
+}
+
+model Inquiry {
+  id           Int             @id @default(autoincrement()) @map("id")
+  tenderId     Int             @map("tender_id")
+  supplierId   Int             @map("supplier_id")
+  questionText String          @map("question_text")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  tender  Tender         @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  supplier Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  answers  InquiryAnswer[]
+
+  @@map("Inquiry")
+}
+
+model InquiryAnswer {
+  id         Int      @id @default(autoincrement()) @map("id")
+  inquiryId  Int      @map("inquiry_id")
+  buyerId    Int      @map("buyer_id")
+  answerText String   @map("answer_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  buyer   Buyer   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@map("InquiryAnswer")
+}
+
+model Offer {
+  id             Int         @id @default(autoincrement()) @map("id")
+  tenderId       Int         @map("tender_id")
+  supplierId     Int         @map("supplier_id")
+  offerValue     Float       @map("offer_value")
+  additionalNotes String?    @map("additional_notes")
+  status         String?     @map("status")
+  submittedAt    DateTime    @default(now()) @map("submitted_at")
+
+  tender Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  files   OfferFile[]
+
+  @@map("offers")
+}
+
+model OfferFile {
+  id        Int      @id @default(autoincrement()) @map("id")
+  offerId   Int      @map("offer_id")
+  fileType  String?  @map("file_type")
+  fileName  String   @map("file_name")
+  fileData  Bytes    @map("file_data")
+  fileSize  Int?     @map("file_size")
+  mimeType  String?  @map("mime_type")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  offer Offer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+
+  @@map("offer_files")
+}

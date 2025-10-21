@@ -1,8 +1,111 @@
 import { RequestHandler } from "express";
-import { db } from "../db";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
 
-// Create new supplier
-export const createSupplier: RequestHandler = (req, res) => {
+const supplierInclude = {
+  city: {
+    include: {
+      region: true,
+    },
+  },
+  domain: true,
+  supplierSubDomains: {
+    include: {
+      subDomain: true,
+    },
+  },
+  supplierLicenses: {
+    include: {
+      license: true,
+    },
+  },
+  supplierCertificates: {
+    include: {
+      certificate: true,
+    },
+  },
+};
+
+const normalizeIds = (value: unknown): number[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "number") {
+          return item;
+        }
+        if (typeof item === "string") {
+          return Number(item);
+        }
+        if (typeof item === "object" && item !== null) {
+          const maybeId = (item as { id?: number | string }).id;
+          if (typeof maybeId === "number") {
+            return maybeId;
+          }
+          if (typeof maybeId === "string") {
+            return Number(maybeId);
+          }
+        }
+        return NaN;
+      })
+      .filter((id) => Number.isFinite(id) && id > 0) as number[];
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? [numeric] : [];
+  }
+
+  return [];
+};
+
+const mapSupplierResponse = (supplier: Awaited<ReturnType<typeof prisma.supplier.findUnique>>) => {
+  if (!supplier) {
+    return null;
+  }
+
+  return {
+    supplier: {
+      ID: supplier.id,
+      company_name: supplier.companyName,
+      Commercial_registration_number: supplier.commercialRegistrationNumber,
+      Commercial_Phone_number: supplier.commercialPhoneNumber,
+      domains_id: supplier.domainId,
+      domain_name: supplier.domain?.name ?? null,
+      city_id: supplier.cityId,
+      city_name: supplier.city?.name ?? null,
+      region_name: supplier.city?.region?.name ?? null,
+      Account_name: supplier.accountName,
+      Account_email: supplier.accountEmail,
+      Account_phone: supplier.accountPhone,
+      Logo: supplier.logo,
+      industry: supplier.industry,
+      description: supplier.description,
+      created_at: supplier.createdAt?.toISOString?.() ?? supplier.createdAt,
+      updated_at: supplier.updatedAt?.toISOString?.() ?? supplier.updatedAt,
+    },
+    subDomains:
+      supplier.supplierSubDomains?.map((entry) => ({
+        sub_domains_id: entry.subDomainId,
+        Name: entry.name ?? entry.subDomain?.name ?? null,
+      })) ?? [],
+    licenses:
+      supplier.supplierLicenses?.map((entry) => ({
+        id: entry.licenseId,
+        Name: entry.license?.name ?? entry.license?.nameEn ?? entry.license?.nameAr ?? null,
+      })) ?? [],
+    certificates:
+      supplier.supplierCertificates?.map((entry) => ({
+        id: entry.certificateId,
+        Name: entry.certificate?.name ?? null,
+      })) ?? [],
+  };
+};
+
+export const createSupplier: RequestHandler = async (req, res) => {
   const {
     commercial_registration_number,
     commercial_phone_number,
@@ -16,370 +119,236 @@ export const createSupplier: RequestHandler = (req, res) => {
     account_password,
     sub_domains = [],
     licenses = [],
-    certificates = []
+    certificates = [],
+    industry,
+    description,
   } = req.body;
 
-  // Validate required fields
-  if (!commercial_registration_number || !commercial_phone_number || !domains_id || 
-      !city_id || !logo || !account_name || !account_email || !account_phone || 
-      !company_name || !account_password) {
-    res.status(400).json({ error: "Missing required fields" });
-    return;
+  if (
+    !commercial_registration_number ||
+    !commercial_phone_number ||
+    !domains_id ||
+    !city_id ||
+    !account_name ||
+    !account_email ||
+    !account_phone ||
+    !company_name ||
+    !account_password
+  ) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const currentTime = new Date().toISOString();
+  const subDomainIds = normalizeIds(sub_domains);
+  const licenseIds = normalizeIds(licenses);
+  const certificateIds = normalizeIds(certificates);
 
-  // Insert supplier
-  db.run(
-    `INSERT INTO Supplier (
-      Commercial_registration_number, Commercial_Phone_number, domains_id, 
-      created_at, city_id, updated_at, Logo, Account_name, Account_email, 
-      Account_phone, company_name, Account_password
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      commercial_registration_number,
-      commercial_phone_number,
-      domains_id,
-      currentTime,
-      city_id,
-      currentTime,
-      logo,
-      account_name,
-      account_email,
-      account_phone,
-      company_name,
-      account_password
-    ],
-    function(err) {
-      if (err) {
-        console.error("Error creating supplier:", err);
-        if (err.message.includes('UNIQUE constraint failed')) {
-          res.status(400).json({ error: "Email already exists" });
-        } else {
-          res.status(500).json({ error: "Failed to create supplier" });
-        }
-        return;
-      }
+  try {
+    const supplier = await prisma.$transaction(async (tx) => {
+      const createdSupplier = await tx.supplier.create({
+        data: {
+          commercialRegistrationNumber: commercial_registration_number,
+          commercialPhoneNumber: commercial_phone_number,
+          domainId: Number(domains_id),
+          cityId: Number(city_id),
+          logo: logo ?? null,
+          accountName: account_name,
+          accountEmail: account_email,
+          accountPhone: account_phone,
+          companyName: company_name,
+          accountPassword: account_password,
+          industry: industry ?? null,
+          description: description ?? null,
+          licensesJson: JSON.stringify(licenseIds),
+          certificatesJson: JSON.stringify(certificateIds),
+        },
+      });
 
-      const supplierId = this.lastID;
+      if (subDomainIds.length > 0) {
+        const subDomains = await tx.subDomain.findMany({
+          where: { id: { in: subDomainIds } },
+          select: { id: true, name: true },
+        });
 
-      // Handle sub-domains associations
-      let completedOperations = 0;
-      const totalOperations = sub_domains.length + licenses.length + certificates.length;
-
-      const checkCompletion = () => {
-        completedOperations++;
-        if (completedOperations === totalOperations) {
-          res.status(201).json({
-            success: true,
-            supplier: {
-              id: supplierId,
-              account_name,
-              company_name,
-              account_email
-            }
+        if (subDomains.length > 0) {
+          await tx.supplierSubDomain.createMany({
+            data: subDomains.map((subDomain) => ({
+              supplierId: createdSupplier.id,
+              subDomainId: subDomain.id,
+              name: subDomain.name,
+            })),
+            skipDuplicates: true,
           });
         }
-      };
+      }
 
-      // If no additional operations needed
-      if (totalOperations === 0) {
-        res.status(201).json({
-          success: true,
-          supplier: {
-            id: supplierId,
-            account_name,
-            company_name,
-            account_email
-          }
+      if (licenseIds.length > 0) {
+        await tx.supplierLicense.createMany({
+          data: licenseIds.map((licenseId) => ({
+            supplierId: createdSupplier.id,
+            licenseId,
+          })),
+          skipDuplicates: true,
         });
-        return;
       }
 
-      // Insert supplier sub-domains
-      sub_domains.forEach((subDomainId: number) => {
-        // Get sub-domain name
-        db.get("SELECT Name FROM sub_domains WHERE ID = ?", [subDomainId], (err, row) => {
-          if (!err && row) {
-            db.run(
-              "INSERT INTO supplier_sub_domains (supplier_id, sub_domains_id, Name) VALUES (?, ?, ?)",
-              [supplierId, subDomainId, row.Name],
-              (err) => {
-                if (err) console.error("Error inserting supplier sub-domain:", err);
-                checkCompletion();
-              }
-            );
-          } else {
-            checkCompletion();
-          }
+      if (certificateIds.length > 0) {
+        await tx.supplierCertificate.createMany({
+          data: certificateIds.map((certificateId) => ({
+            supplierId: createdSupplier.id,
+            certificateId,
+          })),
+          skipDuplicates: true,
         });
-      });
-
-      // Insert supplier licenses
-      licenses.forEach((licenseId: number) => {
-        db.run(
-          "INSERT INTO Supplier_Licenses (supplier_id, license_id) VALUES (?, ?)",
-          [supplierId, licenseId],
-          (err) => {
-            if (err) console.error("Error inserting supplier license:", err);
-            checkCompletion();
-          }
-        );
-      });
-
-      // Insert supplier certificates
-      certificates.forEach((certificateId: number) => {
-        db.run(
-          "INSERT INTO Supplier_Certificates (supplier_id, certificate_id) VALUES (?, ?)",
-          [supplierId, certificateId],
-          (err) => {
-            if (err) console.error("Error inserting supplier certificate:", err);
-            checkCompletion();
-          }
-        );
-      });
-    }
-  );
-};
-
-// Get all suppliers
-export const getSuppliers: RequestHandler = (req, res) => {
-  db.all(
-    `SELECT 
-      s.*,
-      d.Name as domain_name,
-      c.name as city_name,
-      r.name as region_name
-     FROM Supplier s
-     LEFT JOIN domains d ON s.domains_id = d.ID
-     LEFT JOIN City c ON s.city_id = c.id
-     LEFT JOIN Region r ON c.region_id = r.id
-     ORDER BY s.created_at DESC`,
-    [],
-    (err, rows) => {
-      if (err) {
-        console.error("Error fetching suppliers:", err);
-        res.status(500).json({ error: "Failed to fetch suppliers" });
-        return;
       }
 
-      res.json({ suppliers: rows || [] });
+      return createdSupplier;
+    });
+
+    res.status(201).json({
+      success: true,
+      supplier: {
+        id: supplier.id,
+        account_name,
+        company_name,
+        account_email,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating supplier:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(400).json({ error: "Duplicate entry" });
     }
-  );
+
+    res.status(500).json({ error: "Failed to create supplier" });
+  }
 };
 
-// Get supplier by ID
-export const getSupplierById: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const getSuppliers: RequestHandler = async (_req, res) => {
+  try {
+    const suppliers = await prisma.supplier.findMany({
+      include: supplierInclude,
+      orderBy: { createdAt: "desc" },
+    });
 
-  db.get(
-    `SELECT 
-      s.*,
-      d.Name as domain_name,
-      c.name as city_name,
-      r.name as region_name
-     FROM Supplier s
-     LEFT JOIN domains d ON s.domains_id = d.ID
-     LEFT JOIN City c ON s.city_id = c.id
-     LEFT JOIN Region r ON c.region_id = r.id
-     WHERE s.ID = ?`,
-    [id],
-    (err, row) => {
-      if (err) {
-        console.error("Error fetching supplier:", err);
-        res.status(500).json({ error: "Failed to fetch supplier" });
-        return;
-      }
+    const mapped = suppliers
+      .map((supplier) => mapSupplierResponse(supplier)?.supplier)
+      .filter(Boolean);
 
-      if (!row) {
-        res.status(404).json({ error: "Supplier not found" });
-        return;
-      }
-
-      // Get supplier's sub-domains
-      db.all(
-        `SELECT ssd.*, sd.Name 
-         FROM supplier_sub_domains ssd
-         JOIN sub_domains sd ON ssd.sub_domains_id = sd.ID
-         WHERE ssd.supplier_id = ?`,
-        [id],
-        (err, subDomains) => {
-          if (err) {
-            console.error("Error fetching supplier sub-domains:", err);
-            res.status(500).json({ error: "Failed to fetch supplier details" });
-            return;
-          }
-
-          // Get supplier's licenses
-          db.all(
-            `SELECT sl.*, l.Name 
-             FROM Supplier_Licenses sl
-             JOIN Licenses l ON sl.license_id = l.ID
-             WHERE sl.supplier_id = ?`,
-            [id],
-            (err, licenses) => {
-              if (err) {
-                console.error("Error fetching supplier licenses:", err);
-                res.status(500).json({ error: "Failed to fetch supplier details" });
-                return;
-              }
-
-              // Get supplier's certificates
-              db.all(
-                `SELECT sc.*, c.Name 
-                 FROM Supplier_Certificates sc
-                 JOIN Certificates c ON sc.certificate_id = c.ID
-                 WHERE sc.supplier_id = ?`,
-                [id],
-                (err, certificates) => {
-                  if (err) {
-                    console.error("Error fetching supplier certificates:", err);
-                    res.status(500).json({ error: "Failed to fetch supplier details" });
-                    return;
-                  }
-
-                  res.json({
-                    supplier: row,
-                    subDomains: subDomains || [],
-                    licenses: licenses || [],
-                    certificates: certificates || []
-                  });
-                }
-              );
-            }
-          );
-        }
-      );
-    }
-  );
+    res.json({ suppliers: mapped });
+  } catch (error) {
+    console.error("Error fetching suppliers:", error);
+    res.status(500).json({ error: "Failed to fetch suppliers" });
+  }
 };
 
-// Update supplier
-export const updateSupplier: RequestHandler = (req, res) => {
-  console.log("🔵 updateSupplier endpoint called");
-  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-  
-  const { id } = req.params;
-  const updateData = req.body;
+export const getSupplierById: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
 
-  // Build dynamic SQL update query
-  const allowedFields = [
-    'Commercial_registration_number',
-    'Commercial_Phone_number',
-    'domains_id',
-    'city_id',
-    'Logo',
-    'Account_name',
-    'Account_email',
-    'Account_phone',
-    'company_name',
-    'industry'
-  ];
-
-  const fieldsToUpdate = Object.keys(updateData).filter(key => {
-    // Map frontend field names to database field names
-    const dbFieldMap: { [key: string]: string } = {
-      'commercial_registration_number': 'Commercial_registration_number',
-      'commercial_phone_number': 'Commercial_Phone_number',
-      'city_id': 'city_id',
-      'logo': 'Logo',
-      'account_name': 'Account_name',
-      'account_email': 'Account_email',
-      'account_phone': 'Account_phone',
-      'company_name': 'company_name',
-      'industry': 'industry'
-    };
-    
-    const dbField = dbFieldMap[key] || key;
-    return allowedFields.includes(dbField);
-  });
-  
-  if (fieldsToUpdate.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update' });
+  if (!supplierId) {
+    return res.status(400).json({ error: "Invalid supplier ID" });
   }
 
-  // Map field names and prepare values
-  const setClause = fieldsToUpdate.map(field => {
-    const dbFieldMap: { [key: string]: string } = {
-      'commercial_registration_number': 'Commercial_registration_number',
-      'commercial_phone_number': 'Commercial_Phone_number',
-      'city': 'City',
-      'logo': 'Logo',
-      'account_name': 'Account_name',
-      'account_email': 'Account_email',
-      'account_phone': 'Account_phone',
-      'company_name': 'company_name',
-      'industry': 'industry'
-    };
-    
-    const dbField = dbFieldMap[field] || field;
-    return `${dbField} = ?`;
-  }).join(', ');
-
-  const values = fieldsToUpdate.map(field => updateData[field]);
-  values.push(new Date().toISOString()); // Add updated_at
-  values.push(id); // Add id for WHERE clause
-
-  const sql = `UPDATE Supplier SET ${setClause}, updated_at = ? WHERE ID = ?`;
-  
-  console.log("🗄️ Attempting to update supplier in database...");
-  console.log("📝 SQL:", sql);
-  console.log("📊 Values:", values);
-
-  db.run(sql, values, function(err) {
-    if (err) {
-      console.error("❌ Database update error:", err);
-      if (err.message && err.message.includes('UNIQUE constraint failed')) {
-        res.status(400).json({ error: "Email already exists" });
-      } else {
-        res.status(500).json({ error: "Failed to update supplier" });
-      }
-      return;
-    }
-
-    if (this.changes === 0) {
-      console.log("❌ No supplier found with ID:", id);
-      res.status(404).json({ error: "Supplier not found" });
-      return;
-    }
-
-    console.log("✅ Supplier updated successfully");
-    
-    // Return updated supplier data
-    db.get("SELECT * FROM Supplier WHERE ID = ?", [id], (err: Error | null, row: any) => {
-      if (err) {
-        console.error("❌ Error fetching updated supplier:", err);
-        res.status(500).json({ error: "Failed to fetch updated supplier" });
-        return;
-      }
-      
-      if (row) {
-        // Do not return the stored password
-        delete row.Account_password;
-      }
-      
-      console.log("📤 Sending updated supplier response:", row);
-      res.json(row);
+  try {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: supplierId },
+      include: supplierInclude,
     });
-  });
+
+    if (!supplier) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    res.json(mapSupplierResponse(supplier));
+  } catch (error) {
+    console.error("Error fetching supplier:", error);
+    res.status(500).json({ error: "Failed to fetch supplier" });
+  }
 };
 
-// Delete supplier
-export const deleteSupplier: RequestHandler = (req, res) => {
-  const { id } = req.params;
+export const updateSupplier: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
 
-  db.run("DELETE FROM Supplier WHERE ID = ?", [id], function(err) {
-    if (err) {
-      console.error("Error deleting supplier:", err);
-      res.status(500).json({ error: "Failed to delete supplier" });
-      return;
+  if (!supplierId) {
+    return res.status(400).json({ error: "Invalid supplier ID" });
+  }
+
+  const updateData = req.body as Record<string, unknown>;
+
+  const fieldMap: Record<string, keyof Prisma.SupplierUpdateInput> = {
+    commercial_registration_number: "commercialRegistrationNumber",
+    commercial_phone_number: "commercialPhoneNumber",
+    domains_id: "domainId",
+    city_id: "cityId",
+    logo: "logo",
+    account_name: "accountName",
+    account_email: "accountEmail",
+    account_phone: "accountPhone",
+    company_name: "companyName",
+    industry: "industry",
+    description: "description",
+  };
+
+  const data: Prisma.SupplierUpdateInput = {};
+
+  for (const [key, value] of Object.entries(updateData)) {
+    const prismaField = fieldMap[key];
+    if (prismaField) {
+      (data as Record<string, unknown>)[prismaField] = value;
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: "No valid fields to update" });
+  }
+
+  data.updatedAt = new Date();
+
+  try {
+    const supplier = await prisma.supplier.update({
+      where: { id: supplierId },
+      data,
+      include: supplierInclude,
+    });
+
+    const response = mapSupplierResponse(supplier);
+    if (!response) {
+      return res.status(404).json({ error: "Supplier not found" });
     }
 
-    if (this.changes === 0) {
-      res.status(404).json({ error: "Supplier not found" });
-      return;
+    res.json(response.supplier);
+  } catch (error) {
+    console.error("❌ Database update error:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(400).json({ error: "Duplicate entry" });
     }
 
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    res.status(500).json({ error: "Failed to update supplier" });
+  }
+};
+
+export const deleteSupplier: RequestHandler = async (req, res) => {
+  const supplierId = Number(req.params.id);
+
+  if (!supplierId) {
+    return res.status(400).json({ error: "Invalid supplier ID" });
+  }
+
+  try {
+    await prisma.supplier.delete({ where: { id: supplierId } });
     res.json({ success: true, message: "Supplier deleted successfully" });
-  });
+  } catch (error) {
+    console.error("Error deleting supplier:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    res.status(500).json({ error: "Failed to delete supplier" });
+  }
 };

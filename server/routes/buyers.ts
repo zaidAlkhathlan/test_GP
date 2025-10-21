@@ -1,227 +1,173 @@
 import { RequestHandler } from "express";
-import { db } from "../db";
-import { Buyer } from "@shared/api";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../db";
+import { Buyer as BuyerPayload } from "@shared/api";
 
-export const createBuyer: RequestHandler = (req, res) => {
-  console.log("🔵 createBuyer endpoint called");
-  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-  
-  const b: Buyer = req.body;
-
-  // Use the run method with the database wrapper
-  console.log("🗄️ Attempting to insert buyer into database...");
-  
-  // Note: Need to update frontend to send city_id instead of city text
-  const currentTime = new Date().toISOString();
-  
-  db.run(`
-    INSERT INTO Buyer (
-      Commercial_registration_number,
-      Commercial_Phone_number,
-      domains_id,
-      company_name,
-      city_id,
-      Logo,
-      Account_name,
-      Account_email,
-      Account_phone,
-      Account_password,
-      created_at,
-      updated_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-  `, [
-    b.commercial_registration_number,
-    b.commercial_phone_number,
-    b.domains_id || 1, // Default to first domain if not provided
-    b.company_name,
-    b.city_id || 1, // Default to first city if not provided
-    b.logo || null,
-    b.account_name,
-    b.account_email,
-    b.account_phone,
-    b.account_password,
-    currentTime,
-    currentTime
-  ], function (this: any, err: Error | null) {
-    if (err) {
-      console.error("❌ Database insert error:", err);
-      res.status(500).json({ error: "Failed to create buyer" });
-      return;
-    }
-    
-    const id = this.lastID;
-    console.log("✅ Buyer inserted successfully with ID:", id);
-    
-    db.get("SELECT * FROM Buyer WHERE id = ?", [id], (err2: Error | null, row: any) => {
-      if (err2) {
-        console.error("❌ Database fetch error:", err2);
-        res.status(500).json({ error: "Failed to fetch created buyer" });
-        return;
-      }
-      
-      console.log("📖 Retrieved buyer:", row);
-      
-      if (row) {
-        // Do not return the stored password
-        delete row.account_password;
-      }
-      
-      console.log("📤 Sending response:", row);
-      res.status(201).json(row);
-    });
-  });
+const buyerInclude = {
+  city: {
+    include: {
+      region: true,
+    },
+  },
+  domain: true,
 };
 
-// Update existing buyer
-export const updateBuyer: RequestHandler = (req, res) => {
-  console.log("🔵 updateBuyer endpoint called");
-  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-  
-  const { id } = req.params;
-  const updateData = req.body;
-
-  // Build dynamic SQL update query
-  const allowedFields = [
-    'Commercial_registration_number',
-    'Commercial_Phone_number', 
-    'domains_id',
-    'company_name',
-    'city_id',
-    'Logo',
-    'Account_name',
-    'Account_email',
-    'Account_phone',
-    'industry'
-  ];
-
-  const fieldsToUpdate = Object.keys(updateData).filter(key => {
-    // Map frontend field names to database field names
-    const dbFieldMap: { [key: string]: string } = {
-      'commercial_registration_number': 'Commercial_registration_number',
-      'commercial_phone_number': 'Commercial_Phone_number',
-      'domains_id': 'domains_id',
-      'company_name': 'company_name',
-      'city_id': 'city_id',
-      'logo': 'Logo',
-      'account_name': 'Account_name',
-      'account_email': 'Account_email',
-      'account_phone': 'Account_phone',
-      'industry': 'industry'
-    };
-    
-    const dbField = dbFieldMap[key] || key;
-    return allowedFields.includes(dbField);
-  });
-  
-  if (fieldsToUpdate.length === 0) {
-    return res.status(400).json({ error: 'No valid fields to update' });
+const mapBuyerResponse = (buyer: Awaited<ReturnType<typeof prisma.buyer.findUnique>>) => {
+  if (!buyer) {
+    return null;
   }
 
-  // Map field names and prepare values
-  const setClause = fieldsToUpdate.map(field => {
-    const dbFieldMap: { [key: string]: string } = {
-      'commercial_registration_number': 'Commercial_registration_number',
-      'commercial_phone_number': 'Commercial_Phone_number',
-      'domains_id': 'domains_id',
-      'company_name': 'company_name',
-      'city_id': 'city_id',
-      'logo': 'Logo',
-      'account_name': 'Account_name',
-      'account_email': 'Account_email',
-      'account_phone': 'Account_phone',
-      'industry': 'industry'
-    };
-    
-    const dbField = dbFieldMap[field] || field;
-    return `${dbField} = ?`;
-  }).join(', ');
-
-  const values = fieldsToUpdate.map(field => updateData[field]);
-  values.push(id); // Add id for WHERE clause
-
-  const sql = `UPDATE Buyer SET ${setClause} WHERE ID = ?`;
-  
-  console.log("🗄️ Attempting to update buyer in database...");
-  console.log("📝 SQL:", sql);
-  console.log("📊 Values:", values);
-  
-  db.run(sql, values, function (this: any, err: Error | null) {
-    if (err) {
-      console.error("❌ Database update error:", err);
-      res.status(500).json({ error: "Failed to update buyer" });
-      return;
-    }
-    
-    if (this.changes === 0) {
-      console.log("❌ No buyer found with ID:", id);
-      res.status(404).json({ error: "Buyer not found" });
-      return;
-    }
-
-    console.log("✅ Buyer updated successfully");
-    
-    // Return updated buyer data with city and region info
-    db.get(`SELECT 
-      b.*, 
-      c.name as city_name, 
-      r.name as region_name,
-      d.Name as domain_name
-    FROM Buyer b
-    LEFT JOIN City c ON b.city_id = c.id
-    LEFT JOIN Region r ON c.region_id = r.id
-    LEFT JOIN domains d ON b.domains_id = d.ID
-    WHERE b.ID = ?`, [id], (err: Error | null, row: any) => {
-      if (err) {
-        console.error("❌ Error fetching updated buyer:", err);
-        res.status(500).json({ error: "Failed to fetch updated buyer" });
-        return;
-      }
-      
-      if (row) {
-        // Do not return the stored password
-        delete row.Account_password;
-      }
-      
-      console.log("📤 Sending updated buyer response:", row);
-      res.json(row);
-    });
-  });
+  return {
+    ID: buyer.id,
+    company_name: buyer.companyName,
+    Commercial_registration_number: buyer.commercialRegistrationNumber,
+    Commercial_Phone_number: buyer.commercialPhoneNumber,
+    domains_id: buyer.domainId,
+    domain_name: buyer.domain?.name ?? null,
+    city_id: buyer.cityId,
+    city_name: buyer.city?.name ?? null,
+    region_name: buyer.city?.region?.name ?? null,
+    Account_name: buyer.accountName,
+    Account_email: buyer.accountEmail,
+    Account_phone: buyer.accountPhone,
+    Logo: buyer.logo,
+    industry: buyer.industry,
+    description: buyer.description,
+    created_at: buyer.createdAt?.toISOString?.() ?? buyer.createdAt,
+    updated_at: buyer.updatedAt?.toISOString?.() ?? buyer.updatedAt,
+  };
 };
 
-// Get buyer by ID
-export const getBuyerById: RequestHandler = (req, res) => {
-  console.log("🔵 getBuyerById endpoint called");
+export const createBuyer: RequestHandler = async (req, res) => {
+  try {
+    const payload: BuyerPayload = req.body;
+
+    const buyer = await prisma.buyer.create({
+      data: {
+        commercialRegistrationNumber: payload.commercial_registration_number,
+        commercialPhoneNumber: payload.commercial_phone_number,
+        domainId: payload.domains_id || 1,
+        companyName: payload.company_name,
+        cityId: payload.city_id || 1,
+        logo: payload.logo ?? null,
+        accountName: payload.account_name,
+        accountEmail: payload.account_email,
+        accountPhone: payload.account_phone,
+        accountPassword: payload.account_password,
+      },
+      include: buyerInclude,
+    });
+
+    const response = mapBuyerResponse(buyer);
+    if (response) {
+      delete (response as any).Account_password;
+    }
+
+    res.status(201).json(response);
+  } catch (error) {
+    console.error("❌ Database insert error:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(400).json({ error: "Duplicate entry" });
+    }
+
+    res.status(500).json({ error: "Failed to create buyer" });
+  }
+};
+
+export const updateBuyer: RequestHandler = async (req, res) => {
   const { id } = req.params;
-  
-  console.log("📖 Fetching buyer with ID:", id);
-  
-  // Return buyer data with city and region info
-  db.get(`SELECT 
-    b.*, 
-    c.name as city_name, 
-    r.name as region_name,
-    d.Name as domain_name
-  FROM Buyer b
-  LEFT JOIN City c ON b.city_id = c.id
-  LEFT JOIN Region r ON c.region_id = r.id
-  LEFT JOIN domains d ON b.domains_id = d.ID
-  WHERE b.ID = ?`, [id], (err: Error | null, row: any) => {
-    if (err) {
-      console.error("❌ Error fetching buyer:", err);
-      res.status(500).json({ error: "Failed to fetch buyer" });
-      return;
+  const numericId = Number(id);
+
+  if (!numericId) {
+    return res.status(400).json({ error: "Invalid buyer ID" });
+  }
+
+  const updateData = req.body as Partial<BuyerPayload>;
+
+  const fieldMap: Record<string, keyof Prisma.BuyerUpdateInput> = {
+    commercial_registration_number: "commercialRegistrationNumber",
+    commercial_phone_number: "commercialPhoneNumber",
+    domains_id: "domainId",
+    company_name: "companyName",
+    city_id: "cityId",
+    logo: "logo",
+    account_name: "accountName",
+    account_email: "accountEmail",
+    account_phone: "accountPhone",
+    industry: "industry",
+    description: "description",
+  };
+
+  const data: Prisma.BuyerUpdateInput = {};
+
+  for (const [key, value] of Object.entries(updateData)) {
+    const prismaField = fieldMap[key];
+    if (prismaField) {
+      (data as Record<string, unknown>)[prismaField] = value;
     }
-    
-    if (!row) {
-      console.log("❌ No buyer found with ID:", id);
-      res.status(404).json({ error: "Buyer not found" });
-      return;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: "No valid fields to update" });
+  }
+
+  data.updatedAt = new Date();
+
+  try {
+    const updatedBuyer = await prisma.buyer.update({
+      where: { id: numericId },
+      data,
+      include: buyerInclude,
+    });
+
+    const response = mapBuyerResponse(updatedBuyer);
+    if (!response) {
+      return res.status(404).json({ error: "Buyer not found" });
     }
-    
-    // Do not return the stored password
-    delete row.Account_password;
-    
-    console.log("📤 Sending buyer response:", row);
-    res.json(row);
-  });
+
+    delete (response as any).Account_password;
+    res.json(response);
+  } catch (error) {
+    console.error("❌ Database update error:", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return res.status(400).json({ error: "Duplicate entry" });
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return res.status(404).json({ error: "Buyer not found" });
+    }
+
+    res.status(500).json({ error: "Failed to update buyer" });
+  }
+};
+
+export const getBuyerById: RequestHandler = async (req, res) => {
+  const numericId = Number(req.params.id);
+
+  if (!numericId) {
+    return res.status(400).json({ error: "Invalid buyer ID" });
+  }
+
+  try {
+    const buyer = await prisma.buyer.findUnique({
+      where: { id: numericId },
+      include: buyerInclude,
+    });
+
+    if (!buyer) {
+      return res.status(404).json({ error: "Buyer not found" });
+    }
+
+    const response = mapBuyerResponse(buyer);
+    if (response) {
+      delete (response as any).Account_password;
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error("❌ Error fetching buyer:", error);
+    res.status(500).json({ error: "Failed to fetch buyer" });
+  }
 };

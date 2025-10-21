@@ -11,12 +11,14 @@
     ]
   },
   "scripts": {
-    "db:build": "tsx server/build-db.ts",
-    "dev": "npm run db:build && vite",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "dev": "pnpm db:migrate && pnpm db:seed && vite",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.ts",
-    "start": "node dist/server/node-build.mjs",
+    "start": "prisma migrate deploy && node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
     "typecheck": "tsc"
@@ -27,7 +29,7 @@
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "react-select": "^5.10.2",
-    "sql.js": "^1.13.0",
+    "@prisma/client": "^6.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -69,8 +71,7 @@
     "@types/node": "^24.2.1",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@types/sql.js": "^1.4.9",
-    "@types/sqlite3": "^5.1.0",
+    "prisma": "^6.1.0",
     "@types/three": "^0.176.0",
     "@vitejs/plugin-react-swc": "^4.0.0",
     "autoprefixer": "^10.4.21",
@@ -105,6 +106,9 @@
     "vaul": "^1.1.2",
     "vite": "^7.1.2",
     "vitest": "^3.2.4"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
 }
