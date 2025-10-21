@@ -215,19 +215,28 @@ const handleVerifyOtp = async () => {
   const [verifiedPhoneNumber, setVerifiedPhoneNumber] = useState("");
 
 
+const extractNumericIds = (items: { value: string | number }[]) =>
+  items
+    .map((item) => {
+      const rawValue = typeof item.value === "string" ? item.value.trim() : item.value;
+      const numeric = Number(rawValue);
+      return Number.isFinite(numeric) ? numeric : null;
+    })
+    .filter((value): value is number => value !== null);
+
 const handleSubmit = async () => {
   const payload = {
     institutionType,
     commercialRegNumber,
     institutionName,
     selectedDomain,
-    selectedSubDomains,
+    selectedSubDomains: extractNumericIds(selectedSubDomains),
     regionId: selectedRegionId,
     cityId: selectedCityId,
     mobileNumber,
     activityDescription,
-    certificates,
-    licenses,
+    certificates: extractNumericIds(certificates),
+    licenses: extractNumericIds(licenses),
     coordinator: {
       name: coordinatorName,
       email: coordinatorEmail,
