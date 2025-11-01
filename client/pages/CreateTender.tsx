@@ -368,7 +368,7 @@ export default function CreateTender() {
                   </div>
 
                   <div className="text-right">
-                    <label className="text-sm text-tawreed-text-dark mb-2 block">تاريخ فتح المظاريف *</label>
+                    <label className="text-sm text-tawreed-text-dark mb-2 block">تاريخ فتح العروض *</label>
                     <div className="flex gap-3 flex-row-reverse">
                       <input 
                         type="time" 

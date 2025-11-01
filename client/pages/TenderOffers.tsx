@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/Header';
+import SmartProposalEvaluator from '../components/SmartProposalEvaluator';
 
 interface Proposal {
   id: number;
@@ -34,6 +35,8 @@ export default function TenderOffers() {
   const [fileModalProposal, setFileModalProposal] = useState<any | null>(null);
   const [showConfirmAward, setShowConfirmAward] = useState<any | null>(null);
   const [awarding, setAwarding] = useState(false);
+  const [evaluatorOpen, setEvaluatorOpen] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState<any | null>(null);
 
   // Debug effect to track tenderInfo state changes
   useEffect(() => {
@@ -138,6 +141,15 @@ export default function TenderOffers() {
   
   const openFileModal = (proposal: any) => setFileModalProposal(proposal);
   const closeFileModal = () => setFileModalProposal(null);
+  
+  const openEvaluator = (proposal: any) => {
+    setSelectedProposal(proposal);
+    setEvaluatorOpen(true);
+  };
+  const closeEvaluator = () => {
+    setEvaluatorOpen(false);
+    setSelectedProposal(null);
+  };
   
   const downloadFile = async (proposalId: string, fileType: string) => {
     try {
@@ -421,6 +433,45 @@ export default function TenderOffers() {
                       <p className="text-gray-400 text-xs">سيتم عرض التحليل الذكي عند ربط الـ API الخارجي</p>
                     </div>
                   )}
+                </div>
+
+                {/* Smart Proposal Evaluator Section */}
+                <div className="p-6 bg-purple-50 border-t">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h5 className="font-semibold text-purple-900">مقيم العروض الذكي</h5>
+                        <p className="text-purple-700 text-sm mt-1">تقييم شامل للعرض باستخدام الذكاء الاصطناعي</p>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => openEvaluator(offer)}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
+                      بدء التقييم
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-lg p-4 border border-purple-100">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-purple-700">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <span>يشمل: التقييم الفني، المالي، الخبرة، والجدولة الزمنية</span>
+                      </div>
+                      <span className="text-gray-500">مدعوم بالذكاء الاصطناعي</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Additional Notes Section */}
@@ -887,6 +938,16 @@ export default function TenderOffers() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Smart Proposal Evaluator */}
+        {evaluatorOpen && selectedProposal && (
+          <SmartProposalEvaluator
+            proposalId={selectedProposal.id}
+            companyName={selectedProposal.company}
+            isOpen={evaluatorOpen}
+            onClose={closeEvaluator}
+          />
         )}
       </div>
     </div>

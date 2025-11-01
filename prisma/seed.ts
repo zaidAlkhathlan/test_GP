@@ -8,6 +8,7 @@ async function seedRegistrations() {
     { name: "Company 2", crn: "CR90124", phone: "+966553334444" },
     { name: "Company 3", crn: "CR90125", phone: "+966545556666" },
     { name: "Company 4", crn: "CR90128", phone: "+966545556612" },
+    { name: "Company 5", crn: "CR90129", phone: "+966594428924" },
   ];
 
   for (const registration of registrations) {

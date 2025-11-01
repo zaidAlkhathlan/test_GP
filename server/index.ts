@@ -8,6 +8,7 @@ import { createBuyer, updateBuyer, getBuyerById } from "./routes/buyers";
 import { loginBuyer } from "./routes/buyer-auth";
 import { loginSupplier } from "./routes/supplier-auth";
 import { createSupplier, getSuppliers, getSupplierById, updateSupplier, deleteSupplier } from "./routes/suppliers";
+import { getRecommendedTenders } from './routes/recommended-tenders';
 import { listInquiriesForTender, createInquiry, answerInquiry } from './routes/inquiries';
 import { getDomains, getSubDomainsByDomain, getAllSubDomains } from './routes/domains';
 import { getRegions, getCitiesByRegion, getAllCities, getCityById } from './routes/locations';
@@ -150,6 +151,8 @@ export function createServer() {
   app.get('/api/buyers/:id/certificates', getBuyerCertificates);
   app.get('/api/suppliers/:id/licenses', getSupplierLicenses);
   app.get('/api/suppliers/:id/certificates', getSupplierCertificates);
+  // Recommended tenders for supplier
+  app.get('/api/suppliers/:id/recommended-tenders', getRecommendedTenders);
   
   // Add/remove licenses and certificates for buyers
   app.post('/api/buyers/:id/licenses', addBuyerLicense);

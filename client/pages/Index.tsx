@@ -60,7 +60,7 @@ export default function Index() {
           تسجيل دخول مشتري
         </h3>
         <p className="text-sm text-tawreed-text-gray font-arabic">
-          للجهات الحكومية والشركات الباحثة عن موردين
+          للمؤسسات  والشركات الباحثة عن موردين
         </p>
       </div>
     </div>

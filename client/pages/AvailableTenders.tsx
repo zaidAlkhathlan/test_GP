@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import TenderCard from '../components/TenderCard';
 import TenderFilter from '../components/TenderFilter';
-import { fetchTenders } from '../utils/tenderUtils';
+import { fetchTenders, normalizeDateInput } from '../utils/tenderUtils';
 import { Tender } from '@shared/api';
 
 export default function AvailableTenders() {
   const navigate = useNavigate();
   const [currentSupplier, setCurrentSupplier] = useState<any>(null);
+  const [allTenders, setAllTenders] = useState<Tender[]>([]);
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [filteredTenders, setFilteredTenders] = useState<Tender[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,12 +33,19 @@ export default function AvailableTenders() {
   // Fetch tenders data
   useEffect(() => {
     const loadTenders = async () => {
+      if (!currentSupplier) return;
+      
       try {
         setLoading(true);
+        // Fetch all tenders for suppliers to browse
         const tendersData = await fetchTenders();
-        // Only show active tenders for suppliers
-        const activeTenders = tendersData.filter(tender => tender.status === 'active');
-        setTenders(activeTenders);
+        // Keep all fetched tenders in memory (full list)
+        setAllTenders(tendersData);
+        setTenders(tendersData);
+        // Only show active tenders by default for suppliers
+        const activeTenders = tendersData.filter(tender => 
+          (tender as any).status_id === 1 || tender.status === 'active'
+        );
         setFilteredTenders(activeTenders);
       } catch (error) {
         console.error('Error fetching tenders:', error);
@@ -46,9 +54,7 @@ export default function AvailableTenders() {
       }
     };
 
-    if (currentSupplier) {
-      loadTenders();
-    }
+    loadTenders();
   }, [currentSupplier]);
 
   const handleApplyForTender = (tenderId: string) => {
@@ -56,123 +62,164 @@ export default function AvailableTenders() {
     navigate(`/tender/${tenderId}/apply`);
   };
 
-  const handleFilterChange = (filters: any) => {
-    console.log('Filter change received:', filters); // Debug log
-    let filtered = [...tenders];
+  const handleFilterChange = async (filters: any) => {
+    console.log('AvailableTenders.handleFilterChange called with filters:', filters);
+    let base: Tender[] = [...allTenders];
+
+    // If a date range and/or budget range is provided, fetch from server
+    const from = normalizeDateInput(filters?.dateRange?.from);
+    const to = normalizeDateInput(filters?.dateRange?.to);
+    const DEFAULT_BUDGET_MAX = 10000000;
+    const hasBudget = Array.isArray(filters?.budgetRange)
+      && (filters.budgetRange[0] > 0 || filters.budgetRange[1] < DEFAULT_BUDGET_MAX);
+
+    let appliedServerBudgetFilter = false;
+    if (from || to || hasBudget) {
+      try {
+        const opts: any = {};
+        if (from) opts.submitFrom = from;
+        if (to) opts.submitTo = to;
+        if (hasBudget) {
+          opts.expectedMin = Number(filters.budgetRange[0]) || 0;
+          // Only send max if user reduced it below default
+          if (filters.budgetRange[1] < DEFAULT_BUDGET_MAX) {
+            opts.expectedMax = Number(filters.budgetRange[1]);
+          }
+          appliedServerBudgetFilter = true;
+        }
+        const serverFiltered = await fetchTenders(null, opts); // No specific buyer for suppliers
+        // Only show active tenders for suppliers
+        base = serverFiltered.filter(tender => 
+          (tender as any).status_id === 1 || tender.status === 'active'
+        );
+      } catch (e) {
+        console.warn('Failed to fetch server-filtered tenders by date/budget range', e);
+        appliedServerBudgetFilter = false;
+      }
+    }
+
+    let filtered = [...base];
 
     // Search text filter
-    if (filters.searchText && filters.searchText.trim()) {
-      const searchText = filters.searchText.toLowerCase().trim();
+    if (filters.searchText) {
       filtered = filtered.filter(tender => 
-        tender.title.toLowerCase().includes(searchText) ||
-        tender.description?.toLowerCase().includes(searchText) ||
-        tender.company.toLowerCase().includes(searchText)
+        tender.title.toLowerCase().includes(filters.searchText.toLowerCase()) ||
+        tender.description?.toLowerCase().includes(filters.searchText.toLowerCase())
       );
     }
 
-    // Status filter - for suppliers, we might want to show different statuses
-    if (filters.status && (filters.status.active || filters.status.nearDeadline)) {
-      filtered = filtered.filter(tender => {
-        if (filters.status.active && tender.status === 'active') return true;
-        if (filters.status.nearDeadline && tender.remainingDays <= 7) return true;
+    // Status filter - filters.status is an array of selected status IDs
+    if (Array.isArray(filters.status) && filters.status.length > 0) {
+      const now = new Date();
+      const matchesStatus = (sId: number, t: Tender) => {
+        const sid = (t as any).status_id || null;
+
+        // If we have numeric id on tender, use it primarily
+        if (sid) {
+          if (sId === 1) {
+            // OPEN: only include if deadline not passed (not expired)
+            return Number(sid) === 1 && (t.remainingDays ?? 0) > 0;
+          }
+
+          if (sId === 2) {
+            // AWARDING: include tenders already AWARDING, and also those still OPEN but expired
+            if (Number(sid) === 2) return true;
+            if (Number(sid) === 1) {
+              return (t.remainingDays ?? 0) <= 0; // expired but still marked OPEN in DB
+            }
+            return false;
+          }
+
+          if (sId === 3) {
+            // FINISHED: match only finished
+            return Number(sid) === 3;
+          }
+
+          return false;
+        }
+
+        // Fallback textual matching when no numeric id present
+        const name = (t as any).status_name || t.status || '';
+        if (!name) return false;
+
+        if (sId === 1) return String(name).toUpperCase().includes('OPEN') || String(name).includes('نشط');
+        if (sId === 2) return String(name).toUpperCase().includes('AWARD') || String(name).includes('ترس') || String(name).toLowerCase().includes('قريب');
+        if (sId === 3) return String(name).toUpperCase().includes('FINISH') || String(name).includes('قفل') || String(name).includes('مكتمل');
         return false;
+      };
+
+      filtered = filtered.filter((tender) => {
+        return filters.status.some((sId: number) => matchesStatus(Number(sId), tender));
       });
     }
 
-    // Budget filter
-    if (filters.budgetRange && (filters.budgetRange[0] > 0 || filters.budgetRange[1] < 10000000)) {
-      filtered = filtered.filter(tender => {
-        const budgetStr = tender.budget?.toString() || '0';
-        const budget = parseFloat(budgetStr.replace(/[^\d]/g, '')) || 0;
-        return budget >= filters.budgetRange[0] && budget <= filters.budgetRange[1];
-      });
+    // Budget filter (skip if already applied on server)
+    if (!appliedServerBudgetFilter) {
+      if (filters.budgetRange[0] > 0 || filters.budgetRange[1] < DEFAULT_BUDGET_MAX) {
+        filtered = filtered.filter(tender => {
+          const budget = parseFloat(tender.budget?.replace(/[^\d]/g, '') || '0');
+          return budget >= filters.budgetRange[0] && budget <= filters.budgetRange[1];
+        });
+      }
     }
 
-    // Date range filter
-    if (filters.dateRange && (filters.dateRange.from || filters.dateRange.to)) {
-      filtered = filtered.filter(tender => {
-        if (!tender.offerDeadline) return true;
-        
-        const tenderDate = new Date(tender.offerDeadline);
-        const fromDate = filters.dateRange.from ? new Date(filters.dateRange.from) : null;
-        const toDate = filters.dateRange.to ? new Date(filters.dateRange.to) : null;
-        
-        if (fromDate && tenderDate < fromDate) return false;
-        if (toDate && tenderDate > toDate) return false;
-        return true;
-      });
-    }
-
-    // Location filter (region and city)
+    // Location filter (region and city) - prefer numeric ids when available
     if (filters.region || filters.city) {
       filtered = filtered.filter(tender => {
+        // If both tender and filter provide numeric ids, compare them
+        if (filters.city && (tender as any).cityId) {
+          return Number((tender as any).cityId) === Number(filters.city);
+        }
+
+        if (filters.region && (tender as any).regionId) {
+          if (!filters.city) return Number((tender as any).regionId) === Number(filters.region);
+        }
+
+        // Fallback: match by location name
         const location = tender.location?.toLowerCase() || '';
-        
-        if (filters.city && filters.city.trim()) {
-          return location.includes(filters.city.toLowerCase());
+        if (filters.city) {
+          return location.includes(String(filters.city).toLowerCase());
         }
-        
-        if (filters.region && filters.region.trim()) {
-          // Map region keys to location strings that might appear in tender data
-          const regionMappings: { [key: string]: string[] } = {
-            'riyadh': ['رياض', 'الرياض', 'riyadh'],
-            'makkah': ['مكة', 'جدة', 'makkah', 'jeddah'],
-            'eastern': ['دمام', 'خبر', 'eastern', 'dammam', 'khobar'],
-            'asir': ['أبها', 'asir', 'abha'],
-            'qassim': ['بريدة', 'qassim', 'buraidah'],
-            'hail': ['حائل', 'hail'],
-            'northern': ['عرعر', 'northern', 'arar'],
-            'jazan': ['جازان', 'jazan'],
-            'najran': ['نجران', 'najran'],
-            'bahah': ['باحة', 'bahah'],
-            'tabuk': ['تبوك', 'tabuk'],
-            'jawf': ['جوف', 'jawf']
-          };
-          
-          const regionKeywords = regionMappings[filters.region] || [filters.region];
-          return regionKeywords.some(keyword => location.includes(keyword.toLowerCase()));
-        }
-        
         return true;
       });
     }
 
-    // Domain filter (primary and sub domain)
-    if (filters.primaryDomain || filters.subDomain) {
-      filtered = filtered.filter(tender => {
-        // Check if tender has domain information
-        const tenderDomains = tender.subDomains || [];
-        const tenderCategory = tender.category?.toLowerCase() || '';
-        
-        if (filters.subDomain) {
-          return tenderDomains.some(domain => 
-            domain.toLowerCase().includes(filters.subDomain.toLowerCase())
-          ) || tenderCategory.includes(filters.subDomain.toLowerCase());
+    // Domain filters
+    if (filters.primaryDomain) {
+      // If tender has numeric domain id, compare by id
+      filtered = filtered.filter((tender) => {
+        const tDomainId = (tender as any).domain_id || (tender as any).domainId;
+        if (tDomainId) {
+          return String(tDomainId) === String(filters.primaryDomain);
         }
-        
-        if (filters.primaryDomain) {
-          // Map primary domains to categories/keywords
-          const domainMappings: { [key: string]: string[] } = {
-            'tech': ['تقنية', 'برمجيات', 'تكنولوجيا', 'tech', 'software', 'it'],
-            'construction': ['بناء', 'تشييد', 'مقاولات', 'construction', 'building'],
-            'education': ['تعليم', 'تدريب', 'education', 'training'],
-            'health': ['صحة', 'طبي', 'health', 'medical'],
-            'transport': ['نقل', 'مواصلات', 'transport', 'logistics']
-          };
-          
-          const domainKeywords = domainMappings[filters.primaryDomain] || [filters.primaryDomain];
-          return domainKeywords.some(keyword => 
-            tenderCategory.includes(keyword.toLowerCase()) ||
-            tenderDomains.some(domain => domain.toLowerCase().includes(keyword.toLowerCase()))
-          );
-        }
-        
-        return true;
+
+        // Fallback: check category/name
+        return tender.category?.toLowerCase().includes(String(filters.primaryDomain).toLowerCase());
       });
     }
 
-    console.log('Filtered tenders:', filtered.length, 'of', tenders.length); // Debug log
+    if (filters.subDomain) {
+      // Prefer numeric subDomainIds exposed by transformTenderForDisplay
+      filtered = filtered.filter((tender) => {
+        const tSubIds: number[] | undefined = (tender as any).subDomainIds;
+        if (Array.isArray(tSubIds) && tSubIds.length > 0) {
+          return tSubIds.some(id => String(id) === String(filters.subDomain));
+        }
+
+        // Fallback: check raw sub-domain objects if available
+        const raw = (tender as any).rawSubDomains || (tender as any).sub_domains || (tender as any).subDomains || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+          return raw.some((sd: any) => String(sd.ID || sd.id) === String(filters.subDomain) || String(sd.Name || sd.name).toLowerCase().includes(String(filters.subDomain).toLowerCase()));
+        }
+
+        // Final fallback: compare against the simple subDomains names array
+        const subNames = (tender as any).subDomains || [];
+        return Array.isArray(subNames) && subNames.some((s: string) => s.toLowerCase().includes(String(filters.subDomain).toLowerCase()));
+      });
+    }
+
     setFilteredTenders(filtered);
+    console.log('AvailableTenders: filtered count ->', filtered.length);
   };
 
   if (!currentSupplier) {
@@ -258,25 +305,29 @@ export default function AvailableTenders() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد مناقصات متطابقة</h3>
-                <p className="text-gray-600 mb-6">جرب تعديل معايير البحث للعثور على مناقصات مناسبة</p>
-                <button 
-                  onClick={() => {
-                    const resetFilters = {
-                      searchText: '',
-                      status: { active: false, nearDeadline: false },
-                      budgetRange: [0, 10000000] as [number, number],
-                      dateRange: { from: '', to: '' },
-                      region: '',
-                      city: '',
-                      primaryDomain: '',
-                      subDomain: '',
-                    };
-                    handleFilterChange(resetFilters);
-                  }}
-                  className="px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600"
-                >
-                  إعادة تعيين المرشحات
-                </button>
+                <p className="text-gray-600 mb-6">
+                  {tenders.length === 0 ? 'لا توجد مناقصات متاحة حالياً' : 'لا توجد نتائج مطابقة للفلاتر المحددة'}
+                </p>
+                {tenders.length > 0 && (
+                  <button 
+                    onClick={() => {
+                      const resetFilters = {
+                        searchText: '',
+                        status: [],
+                        budgetRange: [0, 10000000] as [number, number],
+                        dateRange: { from: '', to: '' },
+                        region: '',
+                        city: '',
+                        primaryDomain: '',
+                        subDomain: '',
+                      };
+                      handleFilterChange(resetFilters);
+                    }}
+                    className="px-4 py-2 bg-tawreed-green text-white rounded-lg hover:bg-green-600"
+                  >
+                    إعادة تعيين المرشحات
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

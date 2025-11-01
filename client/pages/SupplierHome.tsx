@@ -21,6 +21,8 @@ interface SupplierSession {
 
 export default function SupplierHomePage() {
   const [supplier, setSupplier] = useState<SupplierSession | null>(null);
+  const [recommended, setRecommended] = useState<any[] | null>(null);
+  const [loadingRecommended, setLoadingRecommended] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +43,30 @@ export default function SupplierHomePage() {
       navigate('/supplier/signin');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchRecommended = async () => {
+      if (!supplier) return;
+      setLoadingRecommended(true);
+      try {
+        const res = await fetch(`/api/suppliers/${supplier.id}/recommended-tenders`);
+        if (!res.ok) {
+          console.error('Failed to load recommended tenders', await res.text());
+          setRecommended([]);
+          return;
+        }
+        const data = await res.json();
+        setRecommended(Array.isArray(data.tenders) ? data.tenders : []);
+      } catch (err) {
+        console.error('Error fetching recommended tenders', err);
+        setRecommended([]);
+      } finally {
+        setLoadingRecommended(false);
+      }
+    };
+
+    fetchRecommended();
+  }, [supplier]);
 
   const handleLogout = () => {
     localStorage.removeItem('supplierSession');
@@ -182,7 +208,8 @@ export default function SupplierHomePage() {
           </div>
         </div>
 
-        {/* Matching Opportunities Section */}
+        {/* Matching Opportunities Section - Hidden but kept for future use */}
+        {/*
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="text-right mb-6">
@@ -199,7 +226,6 @@ export default function SupplierHomePage() {
               <div className="text-3xl font-bold text-tawreed-green mb-6">خطأ في تحميل الفرص</div>
             </div>
 
-            {/* Tender Card */}
             <TenderCard
               tender={{
                 id: "1",
@@ -224,79 +250,33 @@ export default function SupplierHomePage() {
             />
           </div>
         </div>
+        */}
 
         {/* Recommended Tenders Section */}
         <div className="mb-8">
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-6 text-right">المناقصات الموصى بها</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <TenderCard
-                tender={{
-                  id: "2",
-                  title: "تطوير نظام إدارة المخزون",
-                  company: "مؤسسة التقنيات المتقدمة",
-                  category: "تقنية المعلومات",
-                  location: "منطقة الجنوب",
-                  offerDeadline: "2025-09-15",
-                  inquiryDeadline: "2025-09-10",
-                  remainingDays: 25,
-                  remainingInquiryDays: 20,
-                  budget: "50,000 ريال",
-                  referenceNumber: "TEC-2025-001",
-                  publishDate: "2025-08-15",
-                  status: "active",
-                  description: "تطوير نظام شامل لإدارة المخزون"
-                }}
-                userType="supplier"
-                showActions={true}
-                className="max-w-sm"
-              />
-              
-              <TenderCard
-                tender={{
-                  id: "3",
-                  title: "تطوير موقع إلكتروني",
-                  company: "مؤسسة تقنيات الويب",
-                  category: "تطوير المواقع",
-                  location: "خطأ في تحميل الموقع",
-                  offerDeadline: "2025-09-20",
-                  inquiryDeadline: "2025-09-15",
-                  remainingDays: 30,
-                  remainingInquiryDays: 25,
-                  budget: "35,000 ريال",
-                  referenceNumber: "WEB-2025-002",
-                  publishDate: "2025-08-20",
-                  status: "active",
-                  description: "تطوير موقع إلكتروني متجاوب مع إدارة المحتوى"
-                }}
-                userType="supplier"
-                showActions={true}
-                className="max-w-sm"
-              />
 
-              <TenderCard
-                tender={{
-                  id: "4",
-                  title: "توريد مستلزمات مكتبية",
-                  company: "مؤسسة التوريدات المكتبية",
-                  category: "التوريدات",
-                  location: "منطقة المدينة",
-                  offerDeadline: "2025-08-25",
-                  inquiryDeadline: "2025-08-20",
-                  remainingDays: 8,
-                  remainingInquiryDays: 3,
-                  budget: "25,000 ريال",
-                  referenceNumber: "SUP-2025-003",
-                  publishDate: "2025-08-10",
-                  status: "active",
-                  description: "توريد مستلزمات مكتبية وقرطاسية متنوعة"
-                }}
-                userType="supplier"
-                showActions={true}
-                className="max-w-sm"
-              />
-            </div>
+            {loadingRecommended ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                <p className="mt-4 text-gray-600">جاري تحميل المناقصات الموصى بها...</p>
+              </div>
+            ) : recommended && recommended.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recommended.map((tender) => (
+                  <TenderCard
+                    key={tender.id}
+                    tender={tender}
+                    userType="supplier"
+                    showActions={true}
+                    className="max-w-sm"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-600">لم يتم العثور على مناقصات مطابقة لتخصصك في الوقت الحالي.</div>
+            )}
           </div>
         </div>
 

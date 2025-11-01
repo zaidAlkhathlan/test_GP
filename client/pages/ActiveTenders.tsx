@@ -197,9 +197,9 @@ export default function ActiveTenders() {
   // Keep all fetched tenders in memory (full list)
   setAllBuyerTenders(fetchedTenders);
   setTenders(fetchedTenders);
-        // By default show only OPEN tenders to preserve existing 'active' UX
-        const defaultVisible = fetchedTenders.filter((t) => (t as any).status_id === 1 || (t.status === 'active'));
-        setFilteredTenders(defaultVisible);
+  // By default show all fetched tenders (no filters applied yet)
+  // The filters will still narrow down results when the user applies them.
+  setFilteredTenders(fetchedTenders);
       } catch (error) {
         console.error('Error loading active tenders:', error);
       } finally {
@@ -226,6 +226,10 @@ export default function ActiveTenders() {
       <div className="max-w-[1400px] mx-auto px-6 py-10">
 
         <div className="flex items-start gap-8" dir="rtl">
+          <aside className="w-80">
+            <TenderFilter onFilterChange={handleFilterChange} />
+          </aside>
+
           <main className="flex-1">
             <div className="text-right mb-6">
               <h1 className="text-2xl font-bold">مناقصاتي النشطة</h1>
@@ -293,10 +297,6 @@ export default function ActiveTenders() {
               )}
             </div>
           </main>
-
-          <aside className="w-80">
-            <TenderFilter onFilterChange={handleFilterChange} />
-          </aside>
         </div>
       </div>
     </div>
